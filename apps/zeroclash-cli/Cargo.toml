@@ -1,0 +1,13 @@
+[package]
+name = "zeroclash-cli"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+documentation.workspace = true
+authors.workspace = true
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
+license-file.workspace = true
+
+[dependencies]

@@ -1,0 +1,25 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/zeroclash",
+    "apps/zeroclash-cli",
+    "crates/zeroclash-i18n"
+]
+
+default-members = [
+    "apps/zeroclash",
+    "apps/zeroclash-cli"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+description = ""
+documentation = ""
+authors = []
+readme = ""
+repository = ""
+license = ""
+license-file = ""
+
+[workspace.dependencies]
