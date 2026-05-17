@@ -12,14 +12,14 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
 description = ""
 documentation = ""
-authors = []
-readme = ""
-repository = ""
-license = ""
-license-file = ""
+authors = ["Fynn Tang <fzpying@gmail.com>"]
+readme = "README.md"
+repository = "https://github.com/zeroclash-labs/zeroclash.git"
+license = "CC-BY-NC-SA-4.0 <https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode>"
+license-file = "LICENSE.md"
 
 [workspace.dependencies]

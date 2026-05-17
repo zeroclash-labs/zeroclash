@@ -4,12 +4,12 @@ version = 4
 
 [[package]]
 name = "zeroclash"
-version = "0.1.0"
+version = "0.0.1"
 
 [[package]]
 name = "zeroclash-cli"
-version = "0.1.0"
+version = "0.0.1"
 
 [[package]]
 name = "zeroclash-i18n"
-version = "0.1.0"
+version = "0.0.1"
