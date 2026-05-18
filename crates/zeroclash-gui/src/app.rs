@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use egui_wgpu::wgpu;
@@ -7,10 +8,14 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::window::{Window, WindowId};
 
-use zeroclash_core::mihomo::{CoreManager, ProxyGroup, Traffic};
-use zeroclash_core::Config;
+use zeroclash_core::config::VergeConfig;
+use zeroclash_core::mihomo::{CoreManager, ProxyGroup};
+use zeroclash_core::profile::ProfilePreview;
+use zeroclash_core::{Config, ProfileStore};
 
+use crate::widgets::profile_page::{ImportDialog, profile_page_ui};
 use crate::widgets::proxy_page::proxy_page_ui;
+use crate::widgets::settings_page::settings_page_ui;
 use crate::widgets::traffic_graph::{TrafficHistory, traffic_summary_ui};
 
 // ── Application ────────────────────────────────────────────────────────────
@@ -28,27 +33,32 @@ struct AppState {
     wgpu_device: wgpu::Device,
     wgpu_queue: wgpu::Queue,
     wgpu_config: wgpu::SurfaceConfiguration,
-
-    // Application state
     config: Config,
+    profile_store: Option<ProfileStore>,
     core_manager: Option<CoreManager>,
     core_running: bool,
-
-    // Proxy data
     proxy_groups: Vec<ProxyGroup>,
     traffic_history: TrafficHistory,
-    last_traffic: Traffic,
-
-    // Page navigation
     current_page: Page,
-    selected_proxy: Option<String>,
+    import_dialog: ImportDialog,
+    pending_commands: Vec<UiCommand>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Page {
     Home,
     Proxies,
+    Profiles,
     Settings,
+}
+
+enum UiCommand {
+    ActivateProfile(String),
+    DeleteProfile(String),
+    ImportProfile(String),
+    SaveConfig(VergeConfig),
+    ToggleCore,
+    Navigate(Page),
 }
 
 impl ZeroClashApp {
@@ -137,13 +147,14 @@ impl ApplicationHandler for ZeroClashApp {
             wgpu_queue: queue,
             wgpu_config: config,
             config: Config::new(),
+            profile_store: None,
             core_manager: None,
             core_running: false,
             proxy_groups: Vec::new(),
             traffic_history: TrafficHistory::default(),
-            last_traffic: Traffic { up: 0, down: 0 },
             current_page: Page::Home,
-            selected_proxy: None,
+            import_dialog: ImportDialog::new(),
+            pending_commands: Vec::new(),
         });
     }
 
@@ -160,28 +171,31 @@ impl ApplicationHandler for ZeroClashApp {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
+                let commands = std::mem::take(&mut state.pending_commands);
+                for cmd in commands {
+                    process_command(state, cmd);
+                }
+
                 let raw_input = state.egui_winit.take_egui_input(&state.window);
 
-                // Clone what we need for the render closure
-                let current_page = state.current_page.clone();
+                // Clone what we need for rendering (avoids double-borrow of state)
                 let core_running = state.core_running;
-                let proxy_groups = state.proxy_groups.clone();
-                let traffic_history = std::mem::take(&mut state.traffic_history);
-                let selected_proxy = state.selected_proxy.clone();
+                let current_page = state.current_page.clone();
+                let traffic = TrafficHistory::default(); // placeholder
+                let verge = state.config.verge.latest_arc().as_ref().clone();
+                let previews = state.profile_store.as_ref().map(|ps| ps.preview()).unwrap_or_default();
 
                 let full_output = state.egui_ctx.run_ui(raw_input, |ui| {
                     render_ui(
                         ui,
                         &current_page,
                         core_running,
-                        &proxy_groups,
-                        &traffic_history,
-                        selected_proxy.as_deref(),
+                        &verge,
+                        &previews,
+                        &mut state.import_dialog,
+                        &mut state.pending_commands,
                     );
                 });
-
-                // Restore traffic history
-                state.traffic_history = traffic_history;
 
                 state
                     .egui_winit
@@ -274,73 +288,159 @@ impl ApplicationHandler for ZeroClashApp {
     }
 }
 
-// ── UI rendering ───────────────────────────────────────────────────────────
+fn process_command(state: &mut AppState, cmd: UiCommand) {
+    match cmd {
+        UiCommand::Navigate(page) => {
+            state.current_page = page;
+        }
+        UiCommand::ActivateProfile(uid) => {
+            if let Some(ref mut store) = state.profile_store {
+                let _ = store.set_current(&uid);
+                let _ = pollster::block_on(store.save());
+            }
+        }
+        UiCommand::DeleteProfile(uid) => {
+            if let Some(ref mut store) = state.profile_store {
+                let _ = store.delete_item(&uid);
+                let _ = pollster::block_on(store.save());
+            }
+        }
+        UiCommand::ImportProfile(url) => {
+            if state.profile_store.is_none() {
+                let data_dir = dirs_next::data_dir()
+                    .unwrap_or_else(|| PathBuf::from("."))
+                    .join("zeroclash");
+                let _ = std::fs::create_dir_all(&data_dir);
+                state.profile_store = pollster::block_on(ProfileStore::load(data_dir)).ok();
+            }
 
+            if let Some(ref store) = state.profile_store {
+                match pollster::block_on(store.fetch_remote(&url, None, None)) {
+                    Ok(item) => {
+                        let mut store_mut = state.profile_store.take().unwrap();
+                        let _ = store_mut.add_item(item);
+                        let _ = pollster::block_on(store_mut.save());
+                        state.profile_store = Some(store_mut);
+                    }
+                    Err(e) => {
+                        log::error!("Failed to fetch profile: {e}");
+                    }
+                }
+            }
+        }
+        UiCommand::SaveConfig(verge) => {
+            state.config.verge.edit_draft(|v| {
+                *v = verge;
+            });
+            state.config.verge.apply();
+        }
+        UiCommand::ToggleCore => {
+            state.core_running = !state.core_running;
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn render_ui(
     ui: &mut egui::Ui,
     current_page: &Page,
     core_running: bool,
-    proxy_groups: &[ProxyGroup],
-    traffic_history: &TrafficHistory,
-    selected_proxy: Option<&str>,
+    verge: &VergeConfig,
+    previews: &[ProfilePreview],
+    import_dialog: &mut ImportDialog,
+    commands: &mut Vec<UiCommand>,
 ) {
     // Sidebar
-    egui::SidePanel::left("sidebar")
+    egui::Panel::left("sidebar")
         .resizable(false)
-        .default_width(180.0)
+        .default_size(180.0)
         .show_inside(ui, |ui| {
             ui.heading("ZeroClash");
             ui.separator();
 
             ui.vertical_centered(|ui| {
-                let status_text = if core_running {
+                let status = if core_running {
                     egui::RichText::new("● Core Running").color(egui::Color32::GREEN)
                 } else {
                     egui::RichText::new("○ Core Stopped").color(egui::Color32::GRAY)
                 };
-                ui.label(status_text);
+                ui.label(status);
             });
             ui.separator();
 
-            // Navigation
-            nav_button(ui, "Home", Page::Home, current_page);
-            nav_button(ui, "Proxies", Page::Proxies, current_page);
-            nav_button(ui, "Settings", Page::Settings, current_page);
+            for (label, page) in [
+                ("Home", Page::Home),
+                ("Proxies", Page::Proxies),
+                ("Profiles", Page::Profiles),
+                ("Settings", Page::Settings),
+            ] {
+                if ui
+                    .selectable_label(current_page == &page, label)
+                    .clicked()
+                {
+                    commands.push(UiCommand::Navigate(page));
+                }
+            }
         });
 
-    // Main content area
+    // Main content
     egui::CentralPanel::default().show_inside(ui, |ui| {
         match current_page {
-            Page::Home => home_page_ui(ui, core_running, traffic_history),
+            Page::Home => home_page_ui(ui, core_running, &TrafficHistory::default(), commands),
             Page::Proxies => {
-                proxy_page_ui(ui, proxy_groups, None, &|group, proxy| {
+                proxy_page_ui(ui, &[], None, &|group, proxy| {
                     log::info!("Select proxy {proxy} in group {group}");
                 });
             }
-            Page::Settings => settings_page_ui(ui),
+            Page::Profiles => {
+                use std::cell::RefCell;
+                let activate = RefCell::new(String::new());
+                let delete = RefCell::new(String::new());
+                let import = RefCell::new(String::new());
+
+                profile_page_ui(
+                    ui,
+                    previews,
+                    import_dialog,
+                    |uid| *activate.borrow_mut() = uid.to_string(),
+                    |uid| *delete.borrow_mut() = uid.to_string(),
+                    |url| *import.borrow_mut() = url.to_string(),
+                );
+
+                let a = activate.borrow().clone();
+                let d = delete.borrow().clone();
+                let i = import.borrow().clone();
+                if !a.is_empty() {
+                    commands.push(UiCommand::ActivateProfile(a));
+                }
+                if !d.is_empty() {
+                    commands.push(UiCommand::DeleteProfile(d));
+                }
+                if !i.is_empty() {
+                    commands.push(UiCommand::ImportProfile(i));
+                }
+            }
+            Page::Settings => {
+                let mut v = verge.clone();
+                settings_page_ui(ui, &mut v, &mut |cfg| {
+                    commands.push(UiCommand::SaveConfig(cfg.clone()));
+                });
+            }
         }
     });
 }
 
-fn nav_button(ui: &mut egui::Ui, label: &str, page: Page, current: &Page) {
-    let selected = *current == page;
-    if ui
-        .selectable_label(selected, label)
-        .clicked()
-    {
-        // Navigation handled by parent state
-        // In a real app we'd send a channel message here
-    }
-}
-
-fn home_page_ui(ui: &mut egui::Ui, core_running: bool, traffic: &TrafficHistory) {
+fn home_page_ui(
+    ui: &mut egui::Ui,
+    core_running: bool,
+    traffic: &TrafficHistory,
+    commands: &mut Vec<UiCommand>,
+) {
     ui.heading("Dashboard");
 
-    // Traffic summary
     traffic_summary_ui(ui, traffic);
     ui.separator();
 
-    // Core status card
     egui::Frame::default()
         .corner_radius(6)
         .stroke(egui::Stroke::new(1.0, egui::Color32::DARK_GRAY))
@@ -350,42 +450,26 @@ fn home_page_ui(ui: &mut egui::Ui, core_running: bool, traffic: &TrafficHistory)
                 ui.label(egui::RichText::new("Core Status").strong());
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if core_running {
-                        if ui.button("Stop Core").clicked() {}
-                    } else if ui.button("Start Core").clicked() {}
+                        if ui.button("Stop Core").clicked() {
+                            commands.push(UiCommand::ToggleCore);
+                        }
+                    } else if ui.button("Start Core").clicked() {
+                        commands.push(UiCommand::ToggleCore);
+                    }
                 });
             });
-
             ui.separator();
-
             ui.horizontal(|ui| {
-                ui.label("HTTP Proxy:");
-                ui.label("127.0.0.1:7899");
+                ui.label("HTTP Proxy:"); ui.label("127.0.0.1:7899");
             });
             ui.horizontal(|ui| {
-                ui.label("SOCKS Proxy:");
-                ui.label("127.0.0.1:7898");
+                ui.label("SOCKS Proxy:"); ui.label("127.0.0.1:7898");
             });
             ui.horizontal(|ui| {
-                ui.label("Mixed Port:");
-                ui.label("127.0.0.1:7897");
+                ui.label("Mixed Port:"); ui.label("127.0.0.1:7897");
             });
         });
 
     ui.add_space(12.0);
-
-    // System info
-    egui::Frame::default()
-        .corner_radius(6)
-        .stroke(egui::Stroke::new(1.0, egui::Color32::DARK_GRAY))
-        .inner_margin(egui::vec2(12.0, 8.0))
-        .show(ui, |ui| {
-            ui.label(egui::RichText::new("System").strong());
-            ui.separator();
-            ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
-        });
-}
-
-fn settings_page_ui(ui: &mut egui::Ui) {
-    ui.heading("Settings");
-    ui.label("Configuration options will be available in a future update.");
+    ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
 }

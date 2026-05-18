@@ -5927,7 +5927,9 @@ dependencies = [
 name = "zeroclash-gui"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "dark-light",
+ "dirs-next",
  "egui",
  "egui-wgpu",
  "egui-winit",

@@ -23,6 +23,8 @@ tokio-tungstenite = "0.26"
 futures-util = "0.3"
 pollster = "0.4"
 dark-light = "2"
+anyhow = { workspace = true }
+dirs-next = "2"
 
 [lints]
 workspace = true
