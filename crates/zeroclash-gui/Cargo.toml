@@ -25,6 +25,8 @@ pollster = "0.4"
 dark-light = "2"
 anyhow = { workspace = true }
 dirs-next = "2"
+tray-icon = "0.19"
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 [lints]
 workspace = true

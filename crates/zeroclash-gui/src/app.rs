@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use egui_wgpu::wgpu;
@@ -12,7 +13,9 @@ use zeroclash_core::config::VergeConfig;
 use zeroclash_core::connection::ConnEntry;
 use zeroclash_core::mihomo::{CoreManager, ProxyGroup};
 use zeroclash_core::profile::ProfilePreview;
-use zeroclash_core::{Config, ProfileStore};
+use zeroclash_core::{Config, ProfileStore, SystemProxy, acquire_singleton, notify};
+
+use crate::tray::{SystemTray, TrayEvent};
 
 use crate::widgets::connection_table::connection_table_ui;
 use crate::widgets::log_viewer::{LogLevel, LogViewer, log_viewer_ui};
@@ -47,6 +50,9 @@ struct AppState {
     connections: Vec<ConnEntry>,
     selected_conn_id: Option<String>,
     log_viewer: LogViewer,
+    // System integration
+    _tray: Option<SystemTray>,
+    window_visible: Arc<AtomicBool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,6 +71,8 @@ enum UiCommand {
     ImportProfile(String),
     SaveConfig(VergeConfig),
     ToggleCore,
+    ToggleSystemProxy,
+    ToggleAutoStart,
     Navigate(Page),
     CloseConnection(String),
 }
@@ -118,6 +126,22 @@ impl ApplicationHandler for ZeroClashApp {
         let mut log_viewer = LogViewer::default();
         log_viewer.push(LogLevel::Info, "zeroclash", "Application started");
 
+        // Singleton check
+        match acquire_singleton("zeroclash") {
+            Ok(true) => log_viewer.push(LogLevel::Info, "sys", "First instance, acquired singleton lock"),
+            Ok(false) => log_viewer.push(LogLevel::Warn, "sys", "Another instance may be running"),
+            Err(e) => log_viewer.push(LogLevel::Error, "sys", &format!("Singleton check failed: {e}")),
+        }
+
+        // System tray
+        let window_visible = Arc::new(AtomicBool::new(true));
+        let tray = SystemTray::new(window_visible.clone())
+            .map_err(|e| log_viewer.push(LogLevel::Warn, "tray", &format!("Tray creation failed: {e}")))
+            .ok();
+
+        // Welcome notification
+        notify("ZeroClash", "Application started successfully");
+
         self.state = Some(AppState {
             window, egui_ctx, egui_winit, egui_renderer,
             wgpu_surface: surface, wgpu_device: device, wgpu_queue: queue,
@@ -128,6 +152,7 @@ impl ApplicationHandler for ZeroClashApp {
             current_page: Page::Home, import_dialog: ImportDialog::new(),
             pending_commands: Vec::new(),
             connections: Vec::new(), selected_conn_id: None, log_viewer,
+            _tray: tray, window_visible,
         });
     }
 
@@ -232,6 +257,52 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
         UiCommand::CloseConnection(id) => {
             state.log_viewer.push(LogLevel::Info, "conn", &format!("Closed connection {id}"));
             if state.selected_conn_id.as_deref() == Some(&id) { state.selected_conn_id = None; }
+        }
+        UiCommand::ToggleSystemProxy => {
+            let enabled = state.config.verge.latest_arc().enable_system_proxy;
+            if !enabled {
+                match SystemProxy::enable(7899, 7898) {
+                    Ok(()) => {
+                        state.config.verge.edit_draft(|c| c.enable_system_proxy = true);
+                        state.config.verge.apply();
+                        notify("ZeroClash", "System proxy enabled");
+                        state.log_viewer.push(LogLevel::Info, "sys", "System proxy enabled");
+                    }
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Proxy enable failed: {e}")),
+                }
+            } else {
+                match SystemProxy::disable() {
+                    Ok(()) => {
+                        state.config.verge.edit_draft(|c| c.enable_system_proxy = false);
+                        state.config.verge.apply();
+                        notify("ZeroClash", "System proxy disabled");
+                        state.log_viewer.push(LogLevel::Info, "sys", "System proxy disabled");
+                    }
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Proxy disable failed: {e}")),
+                }
+            }
+        }
+        UiCommand::ToggleAutoStart => {
+            let auto = zeroclash_core::AutoStart::new("zeroclash", std::env::current_exe().unwrap_or_default());
+            if auto.is_enabled() {
+                match auto.disable() {
+                    Ok(()) => {
+                        state.config.verge.edit_draft(|c| c.enable_auto_launch = false);
+                        state.config.verge.apply();
+                        state.log_viewer.push(LogLevel::Info, "sys", "Auto-start disabled");
+                    }
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Auto-start disable failed: {e}")),
+                }
+            } else {
+                match auto.enable() {
+                    Ok(()) => {
+                        state.config.verge.edit_draft(|c| c.enable_auto_launch = true);
+                        state.config.verge.apply();
+                        state.log_viewer.push(LogLevel::Info, "sys", "Auto-start enabled");
+                    }
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Auto-start enable failed: {e}")),
+                }
+            }
         }
     }
 }
