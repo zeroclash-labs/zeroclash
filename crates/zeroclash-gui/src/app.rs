@@ -42,7 +42,7 @@ struct AppState {
     import_dialog: ImportDialog, pending_commands: Vec<UiCommand>,
     connections: Vec<ConnEntry>, selected_conn_id: Option<String>,
     log_viewer: LogViewer, _tray: Option<SystemTray>,
-    window_visible: Arc<AtomicBool>, client: Option<MihomoClient>,
+    #[allow(dead_code)] window_visible: Arc<AtomicBool>, client: Option<MihomoClient>,
     frame_count: u64,
 }
 
@@ -248,7 +248,7 @@ fn sidebar_ui(ui: &mut egui::Ui, current_page: &Page, core_running: bool, comman
 
         let resp = egui::Frame::default()
             .fill(bg)
-            .rounding(design::RADIUS_SM)
+            .corner_radius(design::RADIUS_SM)
             .inner_margin(egui::vec2(SPACE_MD, SPACE_XS + 2.0))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {

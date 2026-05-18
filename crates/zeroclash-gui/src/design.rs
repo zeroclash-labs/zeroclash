@@ -85,7 +85,7 @@ pub const FONT_XL: f32 = 24.0;
 
 /// Returns true if dark mode should be used.
 pub fn is_dark_mode(ctx: &egui::Context) -> bool {
-    ctx.style().visuals.dark_mode
+    ctx.global_style().visuals.dark_mode
 }
 
 /// Get the active color palette.
@@ -98,7 +98,7 @@ pub fn card_frame(ui: &egui::Ui) -> egui::Frame {
     let c = palette(ui.ctx());
     egui::Frame::default()
         .fill(c.surface)
-        .rounding(RADIUS_MD)
+        .corner_radius(RADIUS_MD)
         .stroke(Stroke::new(1.0, c.border))
         .inner_margin(Vec2::new(SPACE_LG, SPACE_MD))
         .outer_margin(Vec2::new(0.0, SPACE_SM))

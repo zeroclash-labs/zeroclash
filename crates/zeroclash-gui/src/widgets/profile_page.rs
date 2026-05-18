@@ -79,7 +79,7 @@ fn profile_card(ui: &mut egui::Ui, p: &ProfilePreview, activate: &mut bool, dele
     let c = palette(ui.ctx());
     let border = if p.is_current { c.accent } else { c.border };
     egui::Frame::default()
-        .fill(c.surface).rounding(design::RADIUS_MD)
+        .fill(c.surface).corner_radius(design::RADIUS_MD)
         .stroke(egui::Stroke::new(if p.is_current { 2.0 } else { 1.0 }, border))
         .inner_margin(egui::vec2(SPACE_MD + 4.0, SPACE_SM + 2.0))
         .show(ui, |ui| {
