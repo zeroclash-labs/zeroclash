@@ -6868,6 +6868,7 @@ dependencies = [
  "image",
  "log 0.4.29",
  "pollster",
+ "serde_yaml_ng",
  "tokio",
  "tokio-tungstenite",
  "tray-icon",
