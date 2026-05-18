@@ -3,23 +3,106 @@ resolver = "2"
 members = [
     "apps/zeroclash",
     "apps/zeroclash-cli",
-    "crates/zeroclash-i18n"
+    "crates/zeroclash-i18n",
+    "crates/zeroclash-draft",
+    "crates/zeroclash-limiter",
+    "crates/zeroclash-logging",
+    "crates/zeroclash-signal",
+    "crates/zeroclash-sysinfo",
+    "crates/zeroclash-core",
+    "crates/zeroclash-gui",
 ]
 
 default-members = [
     "apps/zeroclash",
-    "apps/zeroclash-cli"
+    "apps/zeroclash-cli",
 ]
 
 [workspace.package]
 version = "0.0.1"
 edition = "2024"
-description = ""
+description = "A pure-Rust desktop GUI for the mihomo (Clash Meta) proxy core"
 documentation = ""
 authors = ["Fynn Tang <fzpying@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/zeroclash-labs/zeroclash.git"
 license = "CC-BY-NC-SA-4.0 <https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode>"
-license-file = "LICENSE.md"
-
 [workspace.dependencies]
+zeroclash-draft = { path = "crates/zeroclash-draft" }
+zeroclash-limiter = { path = "crates/zeroclash-limiter" }
+zeroclash-logging = { path = "crates/zeroclash-logging" }
+zeroclash-signal = { path = "crates/zeroclash-signal" }
+zeroclash-sysinfo = { path = "crates/zeroclash-sysinfo" }
+zeroclash-core = { path = "crates/zeroclash-core" }
+zeroclash-gui = { path = "crates/zeroclash-gui" }
+zeroclash-i18n = { path = "crates/zeroclash-i18n" }
+
+parking_lot = { version = "0.12", features = ["hardware-lock-elision"] }
+anyhow = "1.0"
+tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "time", "sync", "signal", "process"] }
+flexi_logger = "0.31"
+log = "0.4"
+compact_str = { version = "0.9", features = ["serde"] }
+serde = "1.0"
+serde_json = "1.0"
+serde_yaml_ng = "0.10"
+bitflags = "2.11"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+# Windows-only
+deelevate = "0.2"
+
+[workspace.lints.clippy]
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "deny"
+unimplemented = "deny"
+todo = "warn"
+dbg_macro = "warn"
+clone_on_ref_ptr = "warn"
+rc_clone_in_vec_init = "warn"
+large_stack_arrays = "warn"
+large_const_arrays = "warn"
+async_yields_async = "deny"
+mutex_atomic = "deny"
+mutex_integer = "deny"
+rc_mutex = "deny"
+unused_async = "deny"
+await_holding_lock = "deny"
+large_futures = "deny"
+future_not_send = "deny"
+redundant_else = "deny"
+needless_continue = "deny"
+needless_raw_string_hashes = "deny"
+or_fun_call = "deny"
+cognitive_complexity = "deny"
+useless_let_if_seq = "deny"
+use_self = "deny"
+tuple_array_conversions = "deny"
+trait_duplication_in_bounds = "deny"
+suspicious_operation_groupings = "deny"
+string_lit_as_bytes = "deny"
+significant_drop_tightening = "deny"
+significant_drop_in_scrutinee = "deny"
+redundant_clone = "deny"
+needless_pass_by_ref_mut = "deny"
+needless_collect = "deny"
+missing_const_for_fn = "deny"
+iter_with_drain = "deny"
+iter_on_single_items = "deny"
+iter_on_empty_collections = "deny"
+equatable_if_let = "deny"
+collection_is_never_read = "deny"
+branches_sharing_code = "deny"
+pathbuf_init_then_push = "deny"
+option_as_ref_cloned = "deny"
+large_types_passed_by_value = "deny"
+expl_impl_clone_on_copy = "deny"
+copy_iterator = "deny"
+cloned_instead_of_copied = "deny"
+unnecessary_self_imports = "deny"
+unused_trait_names = "deny"
+wildcard_imports = "deny"
+unnecessary_wraps = "deny"

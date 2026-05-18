@@ -1,5 +1,5 @@
 [package]
-name = "zeroclash-i18n"
+name = "zeroclash-gui"
 version.workspace = true
 edition.workspace = true
 description.workspace = true
@@ -10,8 +10,16 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-rust-i18n = "4.0.0"
-sys-locale = "0.3.2"
+zeroclash-core = { workspace = true }
+
+egui = "0.34"
+winit = "0.30"
+egui-winit = "0.34"
+egui-wgpu = "0.34"
+wgpu = "27"
+log = { workspace = true }
+pollster = "0.4"
+dark-light = "2"
 
 [lints]
 workspace = true

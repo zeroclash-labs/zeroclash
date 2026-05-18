@@ -8,7 +8,9 @@ authors.workspace = true
 readme.workspace = true
 repository.workspace = true
 license.workspace = true
-license-file.workspace = true
 
 [dependencies]
-egui = "0.34.2"
+zeroclash-gui = { workspace = true }
+
+[lints]
+workspace = true

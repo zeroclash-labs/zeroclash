@@ -1,5 +1,5 @@
 [package]
-name = "zeroclash-i18n"
+name = "zeroclash-sysinfo"
 version.workspace = true
 edition.workspace = true
 description.workspace = true
@@ -10,8 +10,14 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-rust-i18n = "4.0.0"
-sys-locale = "0.3.2"
+parking_lot = { workspace = true }
+sysinfo = { version = "0.38", features = ["network", "system"] }
+
+[target.'cfg(not(windows))'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+deelevate = { workspace = true }
 
 [lints]
 workspace = true

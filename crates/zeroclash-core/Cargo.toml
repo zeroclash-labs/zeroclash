@@ -1,0 +1,32 @@
+[package]
+name = "zeroclash-core"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+documentation.workspace = true
+authors.workspace = true
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+zeroclash-draft = { workspace = true }
+zeroclash-logging = { workspace = true }
+zeroclash-limiter = { workspace = true }
+zeroclash-sysinfo = { workspace = true }
+zeroclash-signal = { workspace = true }
+zeroclash-i18n = { workspace = true }
+
+parking_lot = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml_ng = { workspace = true }
+compact_str = { workspace = true }
+reqwest = { workspace = true }
+directories = "6"
+
+[lints]
+workspace = true

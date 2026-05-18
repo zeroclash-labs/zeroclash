@@ -1,3 +1,4 @@
 fn main() {
-    println!("Hello, world!");
+    println!("ZeroClash CLI v{}", env!("CARGO_PKG_VERSION"));
+    println!("Not yet implemented.");
 }
