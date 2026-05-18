@@ -7,9 +7,14 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::window::{Window, WindowId};
 
+use zeroclash_core::mihomo::{CoreManager, ProxyGroup, Traffic};
 use zeroclash_core::Config;
 
-/// The main ZeroClash application.
+use crate::widgets::proxy_page::proxy_page_ui;
+use crate::widgets::traffic_graph::{TrafficHistory, traffic_summary_ui};
+
+// ── Application ────────────────────────────────────────────────────────────
+
 pub struct ZeroClashApp {
     state: Option<AppState>,
 }
@@ -23,8 +28,27 @@ struct AppState {
     wgpu_device: wgpu::Device,
     wgpu_queue: wgpu::Queue,
     wgpu_config: wgpu::SurfaceConfiguration,
+
+    // Application state
     config: Config,
+    core_manager: Option<CoreManager>,
     core_running: bool,
+
+    // Proxy data
+    proxy_groups: Vec<ProxyGroup>,
+    traffic_history: TrafficHistory,
+    last_traffic: Traffic,
+
+    // Page navigation
+    current_page: Page,
+    selected_proxy: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Page {
+    Home,
+    Proxies,
+    Settings,
 }
 
 impl ZeroClashApp {
@@ -100,11 +124,8 @@ impl ApplicationHandler for ZeroClashApp {
             None,
         );
 
-        let egui_renderer = egui_wgpu::Renderer::new(
-            &device,
-            surface_format,
-            egui_wgpu::RendererOptions::default(),
-        );
+        let egui_renderer =
+            egui_wgpu::Renderer::new(&device, surface_format, egui_wgpu::RendererOptions::default());
 
         self.state = Some(AppState {
             window,
@@ -116,7 +137,13 @@ impl ApplicationHandler for ZeroClashApp {
             wgpu_queue: queue,
             wgpu_config: config,
             config: Config::new(),
+            core_manager: None,
             core_running: false,
+            proxy_groups: Vec::new(),
+            traffic_history: TrafficHistory::default(),
+            last_traffic: Traffic { up: 0, down: 0 },
+            current_page: Page::Home,
+            selected_proxy: None,
         });
     }
 
@@ -134,9 +161,27 @@ impl ApplicationHandler for ZeroClashApp {
             }
             WindowEvent::RedrawRequested => {
                 let raw_input = state.egui_winit.take_egui_input(&state.window);
+
+                // Clone what we need for the render closure
+                let current_page = state.current_page.clone();
+                let core_running = state.core_running;
+                let proxy_groups = state.proxy_groups.clone();
+                let traffic_history = std::mem::take(&mut state.traffic_history);
+                let selected_proxy = state.selected_proxy.clone();
+
                 let full_output = state.egui_ctx.run_ui(raw_input, |ui| {
-                    render_ui(ui, &state.config, &mut state.core_running);
+                    render_ui(
+                        ui,
+                        &current_page,
+                        core_running,
+                        &proxy_groups,
+                        &traffic_history,
+                        selected_proxy.as_deref(),
+                    );
                 });
+
+                // Restore traffic history
+                state.traffic_history = traffic_history;
 
                 state
                     .egui_winit
@@ -152,7 +197,6 @@ impl ApplicationHandler for ZeroClashApp {
                         .update_texture(&state.wgpu_device, &state.wgpu_queue, *id, delta);
                 }
 
-                // wgpu 29: get_current_texture returns CurrentSurfaceTexture enum
                 let surface_texture = match state.wgpu_surface.get_current_texture() {
                     wgpu::CurrentSurfaceTexture::Success(t) => t,
                     wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
@@ -230,38 +274,118 @@ impl ApplicationHandler for ZeroClashApp {
     }
 }
 
-fn render_ui(ui: &mut egui::Ui, _config: &Config, core_running: &mut bool) {
-    ui.heading("ZeroClash");
-    ui.separator();
+// ── UI rendering ───────────────────────────────────────────────────────────
 
-    ui.horizontal(|ui| {
-        if *core_running {
-            ui.label("Core: Running");
-            if ui.button("Stop Core").clicked() {
-                *core_running = false;
+fn render_ui(
+    ui: &mut egui::Ui,
+    current_page: &Page,
+    core_running: bool,
+    proxy_groups: &[ProxyGroup],
+    traffic_history: &TrafficHistory,
+    selected_proxy: Option<&str>,
+) {
+    // Sidebar
+    egui::SidePanel::left("sidebar")
+        .resizable(false)
+        .default_width(180.0)
+        .show_inside(ui, |ui| {
+            ui.heading("ZeroClash");
+            ui.separator();
+
+            ui.vertical_centered(|ui| {
+                let status_text = if core_running {
+                    egui::RichText::new("● Core Running").color(egui::Color32::GREEN)
+                } else {
+                    egui::RichText::new("○ Core Stopped").color(egui::Color32::GRAY)
+                };
+                ui.label(status_text);
+            });
+            ui.separator();
+
+            // Navigation
+            nav_button(ui, "Home", Page::Home, current_page);
+            nav_button(ui, "Proxies", Page::Proxies, current_page);
+            nav_button(ui, "Settings", Page::Settings, current_page);
+        });
+
+    // Main content area
+    egui::CentralPanel::default().show_inside(ui, |ui| {
+        match current_page {
+            Page::Home => home_page_ui(ui, core_running, traffic_history),
+            Page::Proxies => {
+                proxy_page_ui(ui, proxy_groups, None, &|group, proxy| {
+                    log::info!("Select proxy {proxy} in group {group}");
+                });
             }
-        } else {
-            ui.label("Core: Stopped");
-            if ui.button("Start Core").clicked() {
-                *core_running = true;
-            }
+            Page::Settings => settings_page_ui(ui),
         }
     });
+}
 
+fn nav_button(ui: &mut egui::Ui, label: &str, page: Page, current: &Page) {
+    let selected = *current == page;
+    if ui
+        .selectable_label(selected, label)
+        .clicked()
+    {
+        // Navigation handled by parent state
+        // In a real app we'd send a channel message here
+    }
+}
+
+fn home_page_ui(ui: &mut egui::Ui, core_running: bool, traffic: &TrafficHistory) {
+    ui.heading("Dashboard");
+
+    // Traffic summary
+    traffic_summary_ui(ui, traffic);
     ui.separator();
 
-    ui.horizontal(|ui| {
-        ui.label("Status:");
-        ui.label("v0.0.1");
-    });
+    // Core status card
+    egui::Frame::default()
+        .corner_radius(6)
+        .stroke(egui::Stroke::new(1.0, egui::Color32::DARK_GRAY))
+        .inner_margin(egui::vec2(12.0, 8.0))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label(egui::RichText::new("Core Status").strong());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if core_running {
+                        if ui.button("Stop Core").clicked() {}
+                    } else if ui.button("Start Core").clicked() {}
+                });
+            });
 
-    ui.horizontal(|ui| {
-        ui.label("HTTP Port:");
-        ui.label("7899");
-    });
+            ui.separator();
 
-    ui.horizontal(|ui| {
-        ui.label("SOCKS Port:");
-        ui.label("7898");
-    });
+            ui.horizontal(|ui| {
+                ui.label("HTTP Proxy:");
+                ui.label("127.0.0.1:7899");
+            });
+            ui.horizontal(|ui| {
+                ui.label("SOCKS Proxy:");
+                ui.label("127.0.0.1:7898");
+            });
+            ui.horizontal(|ui| {
+                ui.label("Mixed Port:");
+                ui.label("127.0.0.1:7897");
+            });
+        });
+
+    ui.add_space(12.0);
+
+    // System info
+    egui::Frame::default()
+        .corner_radius(6)
+        .stroke(egui::Stroke::new(1.0, egui::Color32::DARK_GRAY))
+        .inner_margin(egui::vec2(12.0, 8.0))
+        .show(ui, |ui| {
+            ui.label(egui::RichText::new("System").strong());
+            ui.separator();
+            ui.label(format!("Version: {}", env!("CARGO_PKG_VERSION")));
+        });
+}
+
+fn settings_page_ui(ui: &mut egui::Ui) {
+    ui.heading("Settings");
+    ui.label("Configuration options will be available in a future update.");
 }

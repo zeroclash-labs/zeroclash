@@ -1,6 +1,8 @@
 pub mod config;
 pub mod mihomo;
+pub mod enhance;
+pub mod constants;
 
-/// Re-export key types for convenience.
 pub use config::Config;
+pub use mihomo::CoreManager;
 pub use mihomo::MihomoClient;

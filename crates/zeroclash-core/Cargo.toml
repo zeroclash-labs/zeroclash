@@ -27,6 +27,9 @@ serde_yaml_ng = { workspace = true }
 compact_str = { workspace = true }
 reqwest = { workspace = true }
 directories = "6"
+dirs-next = "2"
+tokio-tungstenite = "0.26"
+futures-util = "0.3"
 
 [lints]
 workspace = true
