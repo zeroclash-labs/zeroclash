@@ -1,6 +1,6 @@
 //! Media unlock checker page UI.
 
-use egui::{Color32, Frame, RichText};
+use egui::{Color32, RichText};
 use zeroclash_core::media_unlock::{UnlockResult, UnlockStatus, check_all};
 
 /// Renders the media unlock checker page.

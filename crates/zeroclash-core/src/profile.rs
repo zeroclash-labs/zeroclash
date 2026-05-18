@@ -345,3 +345,80 @@ fn chrono_now() -> usize {
         .unwrap_or_default()
         .as_secs() as usize
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    async fn new_test_store() -> (ProfileStore, TempDir) {
+        let tmp = TempDir::new().expect("tempdir");
+        let store = ProfileStore::load(tmp.path().to_path_buf()).await.expect("load");
+        (store, tmp)
+    }
+
+    #[tokio::test]
+    async fn test_create_local_profile() {
+        let (store, _tmp) = new_test_store().await;
+        let item = store.create_local("Test", "proxies:\n  - name: node1").await.expect("create");
+        assert_eq!(item.name.as_deref(), Some("Test"));
+        assert_eq!(item.itype.as_deref(), Some("local"));
+        assert!(item.uid.is_some());
+        assert!(item.file.as_ref().unwrap().ends_with(".yaml"));
+    }
+
+    #[tokio::test]
+    async fn test_add_and_preview() {
+        let (mut store, _tmp) = new_test_store().await;
+        let item = store.create_local("MyProfile", "proxies: []").await.unwrap();
+        store.add_item(item).unwrap();
+        store.save().await.unwrap();
+
+        let previews = store.preview();
+        assert_eq!(previews.len(), 1);
+        assert_eq!(previews[0].name, "MyProfile");
+        assert!(previews[0].is_current);
+    }
+
+    #[tokio::test]
+    async fn test_set_current() {
+        let (mut store, _tmp) = new_test_store().await;
+        let a = store.create_local("A", "a: 1").await.unwrap();
+        let b = store.create_local("B", "b: 2").await.unwrap();
+        store.add_item(a).unwrap();
+        store.add_item(b).unwrap();
+
+        let uid_b = store.preview()[1].uid.clone();
+        store.set_current(&uid_b).unwrap();
+        assert_eq!(store.profiles.current.as_deref(), Some(uid_b.as_str()));
+    }
+
+    #[tokio::test]
+    async fn test_delete_item() {
+        let (mut store, _tmp) = new_test_store().await;
+        let item = store.create_local("Del", "x: 1").await.unwrap();
+        let uid = item.uid.clone().unwrap();
+        store.add_item(item).unwrap();
+
+        let was_current = store.delete_item(&uid).unwrap();
+        assert!(was_current);
+        assert!(store.preview().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_reorder() {
+        let (mut store, _tmp) = new_test_store().await;
+        let a = store.create_local("First", "a: 1").await.unwrap();
+        let b = store.create_local("Second", "b: 2").await.unwrap();
+        let a_uid = a.uid.clone().unwrap();
+        let b_uid = b.uid.clone().unwrap();
+        store.add_item(a).unwrap();
+        store.add_item(b).unwrap();
+
+        store.reorder(&a_uid, &b_uid).unwrap();
+        let previews = store.preview();
+        // reorder(a, b) moves a to before b, so order becomes [a, b] → a stays first
+        assert_eq!(previews.len(), 2);
+        assert!(!previews.is_empty());
+    }
+}

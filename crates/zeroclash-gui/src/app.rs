@@ -11,11 +11,12 @@ use winit::window::{Window, WindowId};
 
 use zeroclash_core::config::VergeConfig;
 use zeroclash_core::connection::ConnEntry;
-use zeroclash_core::mihomo::{CoreManager, ProxyGroup};
+use zeroclash_core::mihomo::{CoreManager, MihomoClient, ProxyGroup};
 use zeroclash_core::profile::ProfilePreview;
 use zeroclash_core::{Config, ProfileStore, SystemProxy, acquire_singleton, notify};
 
-use crate::tray::{SystemTray, TrayEvent};
+use crate::tray::SystemTray;
+use crate::theme::apply_theme;
 
 use crate::widgets::connection_table::connection_table_ui;
 use crate::widgets::log_viewer::{LogLevel, LogViewer, log_viewer_ui};
@@ -46,13 +47,13 @@ struct AppState {
     current_page: Page,
     import_dialog: ImportDialog,
     pending_commands: Vec<UiCommand>,
-    // Connection & log state
     connections: Vec<ConnEntry>,
     selected_conn_id: Option<String>,
     log_viewer: LogViewer,
-    // System integration
     _tray: Option<SystemTray>,
+    #[allow(dead_code)]
     window_visible: Arc<AtomicBool>,
+    client: Option<MihomoClient>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -75,6 +76,8 @@ enum UiCommand {
     ToggleAutoStart,
     Navigate(Page),
     CloseConnection(String),
+    RefreshProxies,
+    RefreshConnections,
 }
 
 impl ZeroClashApp {
@@ -91,7 +94,7 @@ impl ApplicationHandler for ZeroClashApp {
         if self.state.is_some() {
             return;
         }
-        // ... window/surface setup identical to Phase 2 ...
+
         let window_attrs = Window::default_attributes()
             .with_title("ZeroClash")
             .with_inner_size(winit::dpi::LogicalSize::new(1200.0, 800.0));
@@ -126,21 +129,18 @@ impl ApplicationHandler for ZeroClashApp {
         let mut log_viewer = LogViewer::default();
         log_viewer.push(LogLevel::Info, "zeroclash", "Application started");
 
-        // Singleton check
         match acquire_singleton("zeroclash") {
-            Ok(true) => log_viewer.push(LogLevel::Info, "sys", "First instance, acquired singleton lock"),
+            Ok(true) => log_viewer.push(LogLevel::Info, "sys", "First instance, singleton lock acquired"),
             Ok(false) => log_viewer.push(LogLevel::Warn, "sys", "Another instance may be running"),
             Err(e) => log_viewer.push(LogLevel::Error, "sys", &format!("Singleton check failed: {e}")),
         }
 
-        // System tray
         let window_visible = Arc::new(AtomicBool::new(true));
         let tray = SystemTray::new(window_visible.clone())
-            .map_err(|e| log_viewer.push(LogLevel::Warn, "tray", &format!("Tray creation failed: {e}")))
+            .map_err(|e| log_viewer.push(LogLevel::Warn, "tray", &format!("Tray failed: {e}")))
             .ok();
 
-        // Welcome notification
-        notify("ZeroClash", "Application started successfully");
+        notify("ZeroClash", "Application started");
 
         self.state = Some(AppState {
             window, egui_ctx, egui_winit, egui_renderer,
@@ -153,6 +153,7 @@ impl ApplicationHandler for ZeroClashApp {
             pending_commands: Vec::new(),
             connections: Vec::new(), selected_conn_id: None, log_viewer,
             _tray: tray, window_visible,
+            client: None,
         });
     }
 
@@ -163,8 +164,19 @@ impl ApplicationHandler for ZeroClashApp {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {
+                // Process pending commands
                 let commands = std::mem::take(&mut state.pending_commands);
                 for cmd in commands { process_command(state, cmd); }
+
+                // Apply theme from config
+                let theme_mode = state.config.verge.latest_arc().theme_mode.clone();
+                apply_theme(&state.egui_ctx, &theme_mode);
+
+                // Periodically refresh data when core is running
+                if state.core_running {
+                    state.pending_commands.push(UiCommand::RefreshProxies);
+                    state.pending_commands.push(UiCommand::RefreshConnections);
+                }
 
                 let raw_input = state.egui_winit.take_egui_input(&state.window);
                 let current_page = state.current_page.clone();
@@ -173,10 +185,13 @@ impl ApplicationHandler for ZeroClashApp {
                 let previews = state.profile_store.as_ref().map(|ps| ps.preview()).unwrap_or_default();
 
                 let full_output = state.egui_ctx.run_ui(raw_input, |ui| {
-                    render_ui(ui, &current_page, core_running, &verge, &previews,
+                    render_ui(
+                        ui, &current_page, core_running, &verge, &previews,
                         &mut state.import_dialog, &mut state.pending_commands,
                         &state.connections, &mut state.selected_conn_id,
-                        &mut state.log_viewer);
+                        &mut state.log_viewer, &state.proxy_groups,
+                        &state.traffic_history,
+                    );
                 });
 
                 state.egui_winit.handle_platform_output(&state.window, full_output.platform_output);
@@ -246,15 +261,30 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
                         let mut sm = state.profile_store.take().unwrap();
                         let _ = sm.add_item(item); let _ = pollster::block_on(sm.save());
                         state.profile_store = Some(sm);
-                        state.log_viewer.push(LogLevel::Info, "profile", &format!("Imported profile {name}"));
+                        state.log_viewer.push(LogLevel::Info, "profile", &format!("Imported {name}"));
                     }
                     Err(e) => state.log_viewer.push(LogLevel::Error, "profile", &format!("Import failed: {e}")),
                 }
             }
         }
         UiCommand::SaveConfig(v) => { state.config.verge.edit_draft(|c| *c = v); state.config.verge.apply(); }
-        UiCommand::ToggleCore => { state.core_running = !state.core_running; }
+        UiCommand::ToggleCore => {
+            state.core_running = !state.core_running;
+            if state.core_running {
+                state.client = Some(MihomoClient::default_addr());
+                state.log_viewer.push(LogLevel::Info, "core", "Core started (simulated)");
+            } else {
+                state.client = None;
+                state.proxy_groups.clear();
+                state.connections.clear();
+                state.log_viewer.push(LogLevel::Info, "core", "Core stopped");
+            }
+        }
         UiCommand::CloseConnection(id) => {
+            // If we have a client, attempt close via API
+            if let Some(ref client) = state.client {
+                let _ = pollster::block_on(client.close_connection(&id));
+            }
             state.log_viewer.push(LogLevel::Info, "conn", &format!("Closed connection {id}"));
             if state.selected_conn_id.as_deref() == Some(&id) { state.selected_conn_id = None; }
         }
@@ -268,7 +298,7 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
                         notify("ZeroClash", "System proxy enabled");
                         state.log_viewer.push(LogLevel::Info, "sys", "System proxy enabled");
                     }
-                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Proxy enable failed: {e}")),
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Proxy failed: {e}")),
                 }
             } else {
                 match SystemProxy::disable() {
@@ -278,7 +308,7 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
                         notify("ZeroClash", "System proxy disabled");
                         state.log_viewer.push(LogLevel::Info, "sys", "System proxy disabled");
                     }
-                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Proxy disable failed: {e}")),
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Proxy failed: {e}")),
                 }
             }
         }
@@ -291,7 +321,7 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
                         state.config.verge.apply();
                         state.log_viewer.push(LogLevel::Info, "sys", "Auto-start disabled");
                     }
-                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Auto-start disable failed: {e}")),
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Auto-start: {e}")),
                 }
             } else {
                 match auto.enable() {
@@ -300,7 +330,21 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
                         state.config.verge.apply();
                         state.log_viewer.push(LogLevel::Info, "sys", "Auto-start enabled");
                     }
-                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Auto-start enable failed: {e}")),
+                    Err(e) => state.log_viewer.push(LogLevel::Error, "sys", &format!("Auto-start: {e}")),
+                }
+            }
+        }
+        UiCommand::RefreshProxies => {
+            if let Some(ref client) = state.client {
+                if let Ok(v) = pollster::block_on(client.proxies()) {
+                    state.proxy_groups = parse_proxy_groups(&v);
+                }
+            }
+        }
+        UiCommand::RefreshConnections => {
+            if let Some(ref client) = state.client {
+                if let Ok(v) = pollster::block_on(client.connections()) {
+                    state.connections = parse_connections(&v);
                 }
             }
         }
@@ -313,7 +357,8 @@ fn render_ui(
     verge: &VergeConfig, previews: &[ProfilePreview],
     import_dialog: &mut ImportDialog, commands: &mut Vec<UiCommand>,
     connections: &[ConnEntry], selected_conn_id: &mut Option<String>,
-    log_viewer: &mut LogViewer,
+    log_viewer: &mut LogViewer, proxy_groups: &[ProxyGroup],
+    traffic: &TrafficHistory,
 ) {
     egui::Panel::left("sidebar").resizable(false).default_size(180.0).show_inside(ui, |ui| {
         ui.heading("ZeroClash"); ui.separator();
@@ -335,8 +380,8 @@ fn render_ui(
 
     egui::CentralPanel::default().show_inside(ui, |ui| {
         match current_page {
-            Page::Home => home_page_ui(ui, core_running, &TrafficHistory::default(), commands),
-            Page::Proxies => proxy_page_ui(ui, &[], None, &|g, p| log::info!("Select {p} in {g}")),
+            Page::Home => home_page_ui(ui, core_running, traffic, commands),
+            Page::Proxies => proxy_page_ui(ui, proxy_groups, None, &|g, p| log::info!("Select {p} in {g}")),
             Page::Profiles => {
                 use std::cell::RefCell;
                 let (a, d, i) = (RefCell::new(String::new()), RefCell::new(String::new()), RefCell::new(String::new()));
@@ -354,7 +399,17 @@ fn render_ui(
             Page::Logs => log_viewer_ui(ui, log_viewer),
             Page::Settings => {
                 let mut v = verge.clone();
-                settings_page_ui(ui, &mut v, &mut |cfg| commands.push(UiCommand::SaveConfig(cfg.clone())));
+                let mut save_action = None;
+                let mut proxy_action = false;
+                let mut autostart_action = false;
+                settings_page_ui(ui, &mut v,
+                    &mut |cfg| save_action = Some(cfg.clone()),
+                    &mut || proxy_action = true,
+                    &mut || autostart_action = true,
+                );
+                if let Some(cfg) = save_action { commands.push(UiCommand::SaveConfig(cfg)); }
+                if proxy_action { commands.push(UiCommand::ToggleSystemProxy); }
+                if autostart_action { commands.push(UiCommand::ToggleAutoStart); }
             }
         }
     });
@@ -379,4 +434,80 @@ fn home_page_ui(ui: &mut egui::Ui, core_running: bool, traffic: &TrafficHistory,
         });
     ui.add_space(12.0);
     ui.label(format!("v{}", env!("CARGO_PKG_VERSION")));
+}
+
+// ── Data parsers ───────────────────────────────────────────────────────────
+
+fn parse_proxy_groups(v: &serde_json::Value) -> Vec<ProxyGroup> {
+    let mut groups = Vec::new();
+    let proxies = match v.get("proxies") {
+        Some(p) => p,
+        None => return groups,
+    };
+
+    if let Some(obj) = proxies.as_object() {
+        for (name, val) in obj {
+            if let Some(typ) = val.get("type").and_then(|t| t.as_str()) {
+                let all: Vec<String> = val.get("all")
+                    .and_then(|a| a.as_array())
+                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                    .unwrap_or_default();
+
+                let now = val.get("now").and_then(|n| n.as_str()).map(String::from);
+
+                let history: Vec<zeroclash_core::mihomo::DelayHistory> = val.get("history")
+                    .and_then(|h| h.as_array())
+                    .map(|arr| arr.iter().filter_map(|v| {
+                        Some(zeroclash_core::mihomo::DelayHistory {
+                            time: String::new(),
+                            delay: v.get("delay").and_then(|d| d.as_u64()).unwrap_or(0),
+                        })
+                    }).collect())
+                    .unwrap_or_default();
+
+                groups.push(ProxyGroup {
+                    name: name.clone(),
+                    group_type: typ.to_string(),
+                    now,
+                    all,
+                    history,
+                });
+            }
+        }
+    }
+    groups
+}
+
+fn parse_connections(v: &serde_json::Value) -> Vec<ConnEntry> {
+    let mut entries = Vec::new();
+    let conns = match v.get("connections").and_then(|c| c.as_array()) {
+        Some(c) => c,
+        None => return entries,
+    };
+
+    for conn in conns {
+        let metadata = conn.get("metadata");
+        entries.push(ConnEntry {
+            id: conn.get("id").and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            host: metadata.and_then(|m| m.get("host")).and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            network: metadata.and_then(|m| m.get("network")).and_then(|v| v.as_str()).unwrap_or("tcp").to_string(),
+            conn_type: metadata.and_then(|m| m.get("type")).and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            source_ip: metadata.and_then(|m| m.get("sourceIP")).and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            destination_ip: metadata.and_then(|m| m.get("destinationIP")).and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            source_port: metadata.and_then(|m| m.get("sourcePort")).and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            destination_port: metadata.and_then(|m| m.get("destinationPort")).and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            dns_mode: metadata.and_then(|m| m.get("dnsMode")).and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            chains: conn.get("chains").and_then(|v| v.as_array()).map(|arr| {
+                arr.iter().filter_map(|v| v.as_str().map(String::from)).collect()
+            }).unwrap_or_default(),
+            rule: conn.get("rule").and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            rule_payload: conn.get("rulePayload").and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            upload: conn.get("upload").and_then(|v| v.as_u64()).unwrap_or(0),
+            download: conn.get("download").and_then(|v| v.as_u64()).unwrap_or(0),
+            start: conn.get("start").and_then(|v| v.as_str()).unwrap_or("-").to_string(),
+            speed_up: 0,
+            speed_down: 0,
+        });
+    }
+    entries
 }

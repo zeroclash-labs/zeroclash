@@ -8,6 +8,8 @@ pub fn settings_page_ui(
     ui: &mut egui::Ui,
     config: &mut VergeConfig,
     on_save: &mut dyn FnMut(&VergeConfig),
+    on_toggle_system_proxy: &mut dyn FnMut(),
+    on_toggle_auto_start: &mut dyn FnMut(),
 ) {
     ui.heading("Settings");
     ui.separator();
@@ -17,7 +19,6 @@ pub fn settings_page_ui(
         .show(ui, |ui| {
             // ── Appearance ──
             settings_section(ui, "Appearance", |ui| {
-                // Language
                 ui.horizontal(|ui| {
                     ui.label("Language:");
                     let mut lang_idx = if config.language == "zh" { 0 } else { 1 };
@@ -34,7 +35,6 @@ pub fn settings_page_ui(
                     }
                 });
 
-                // Theme
                 ui.horizontal(|ui| {
                     ui.label("Theme:");
                     let themes = ["system", "light", "dark"];
@@ -60,13 +60,18 @@ pub fn settings_page_ui(
             // ── System ──
             settings_section(ui, "System", |ui| {
                 checkbox_field(ui, "System Proxy", &mut config.enable_system_proxy);
+                if ui.button("Toggle System Proxy").clicked() {
+                    on_toggle_system_proxy();
+                }
                 checkbox_field(ui, "TUN Mode", &mut config.enable_tun);
                 checkbox_field(ui, "Auto Launch", &mut config.enable_auto_launch);
+                if ui.button("Toggle Auto Start").clicked() {
+                    on_toggle_auto_start();
+                }
             });
 
             ui.separator();
 
-            // Save button
             if ui.button("Save Settings").clicked() {
                 on_save(config);
             }

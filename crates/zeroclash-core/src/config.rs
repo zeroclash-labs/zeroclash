@@ -58,30 +58,16 @@ pub struct VergeConfig {
     pub clash_core_path: String,
 }
 
-fn default_language() -> String {
-    "zh".into()
-}
-fn default_theme_mode() -> String {
-    "system".into()
-}
-fn default_http_port() -> u16 {
-    7899
-}
-fn default_socks_port() -> u16 {
-    7898
-}
-fn default_mixed_port() -> u16 {
-    7897
-}
-fn default_redir_port() -> u16 {
-    7895
-}
-fn default_tproxy_port() -> u16 {
-    7896
-}
-fn default_true() -> bool {
-    true
-}
+#[allow(clippy::missing_const_for_fn)]
+fn default_language() -> String { "zh".into() }
+#[allow(clippy::missing_const_for_fn)]
+fn default_theme_mode() -> String { "system".into() }
+const fn default_http_port() -> u16 { 7899 }
+const fn default_socks_port() -> u16 { 7898 }
+const fn default_mixed_port() -> u16 { 7897 }
+const fn default_redir_port() -> u16 { 7895 }
+const fn default_tproxy_port() -> u16 { 7896 }
+const fn default_true() -> bool { true }
 
 impl Default for VergeConfig {
     fn default() -> Self {
