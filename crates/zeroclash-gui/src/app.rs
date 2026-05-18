@@ -40,6 +40,7 @@ struct AppState {
     wgpu_config: wgpu::SurfaceConfiguration,
     config: Config,
     profile_store: Option<ProfileStore>,
+    #[allow(dead_code)]
     core_manager: Option<CoreManager>,
     core_running: bool,
     proxy_groups: Vec<ProxyGroup>,

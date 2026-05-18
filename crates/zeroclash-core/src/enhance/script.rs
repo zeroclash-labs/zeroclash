@@ -4,7 +4,6 @@
 use super::use_lowercase;
 use anyhow::{Result, bail};
 use parking_lot::Mutex;
-use serde_json::Value as JsonValue;
 use serde_yaml_ng::Mapping;
 use std::sync::Arc;
 use std::time::Duration;

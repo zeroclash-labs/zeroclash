@@ -5,7 +5,9 @@ use std::path::PathBuf;
 
 /// Platform abstraction for service management.
 pub struct ServiceManager {
+    #[allow(dead_code)]
     core_path: PathBuf,
+    #[allow(dead_code)]
     service_name: String,
 }
 
