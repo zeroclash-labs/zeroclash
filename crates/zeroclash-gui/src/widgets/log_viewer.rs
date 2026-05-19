@@ -1,6 +1,8 @@
-//! Log viewer with level filtering and text search.
+//! Log viewer with level filtering, search, and auto-scroll.
+//! All colors use design tokens for dark/light mode compatibility.
 
-use egui::{Color32, RichText, ScrollArea};
+use crate::design::{FONT_SM, FONT_XS, SPACE_SM, SPACE_XS, palette};
+use egui::{RichText, ScrollArea};
 
 /// Log severity levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -14,27 +16,18 @@ pub enum LogLevel {
 impl LogLevel {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Error => "ERROR",
-            Self::Warn => "WARN",
-            Self::Info => "INFO",
-            Self::Debug => "DEBUG",
-        }
-    }
-
-    pub fn color(&self) -> Color32 {
-        match self {
-            Self::Error => Color32::RED,
-            Self::Warn => Color32::from_rgb(251, 188, 4),
-            Self::Info => Color32::LIGHT_BLUE,
-            Self::Debug => Color32::GRAY,
+            Self::Error => "ERR",
+            Self::Warn => "WRN",
+            Self::Info => "INF",
+            Self::Debug => "DBG",
         }
     }
 
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_uppercase().as_str() {
             "ERROR" | "ERR" => Some(Self::Error),
-            "WARN" | "WARNING" => Some(Self::Warn),
-            "INFO" => Some(Self::Info),
+            "WARN" | "WARNING" | "WRN" => Some(Self::Warn),
+            "INFO" | "INF" => Some(Self::Info),
             "DEBUG" | "DBG" => Some(Self::Debug),
             _ => None,
         }
@@ -88,8 +81,6 @@ impl LogStore {
     }
 }
 
-// Placeholder chrono usage; remove if we drop the dep.
-/// Simple time formatting without chrono dependency.
 fn now_timestamp() -> String {
     use std::time::SystemTime;
     let dur = SystemTime::now()
@@ -102,7 +93,7 @@ fn now_timestamp() -> String {
     format!("{h:02}:{m:02}:{s:02}")
 }
 
-/// Log viewer widget.
+/// Log viewer widget state.
 pub struct LogViewer {
     pub store: LogStore,
     pub filter_level: LogLevel,
@@ -129,33 +120,76 @@ impl LogViewer {
 
 /// Render the log viewer.
 pub fn log_viewer_ui(ui: &mut egui::Ui, viewer: &mut LogViewer) {
-    ui.heading("Logs");
-    ui.separator();
+    let c = palette(ui.ctx());
+
+    // Header
+    ui.horizontal(|ui| {
+        ui.label(
+            RichText::new("Logs")
+                .size(16.0)
+                .color(c.text_primary)
+                .strong(),
+        );
+        ui.add_space(SPACE_SM);
+        ui.label(
+            RichText::new(format!("({})", viewer.store.entries().len()))
+                .size(FONT_SM)
+                .color(c.text_muted),
+        );
+    });
+    ui.add_space(SPACE_SM);
 
     // Toolbar
-    ui.horizontal(|ui| {
-        ui.label("Level:");
-        for level in &[LogLevel::Error, LogLevel::Warn, LogLevel::Info, LogLevel::Debug] {
-            if ui
-                .selectable_label(viewer.filter_level == *level, level.as_str())
-                .clicked()
-            {
-                viewer.filter_level = *level;
+    let toolbar_frame = egui::Frame::default()
+        .fill(c.surface)
+        .corner_radius(crate::design::RADIUS_SM)
+        .inner_margin(egui::vec2(SPACE_SM, SPACE_XS));
+    toolbar_frame.show(ui, |ui| {
+        ui.horizontal(|ui| {
+            // Level filter chips
+            let levels = [
+                (LogLevel::Error, "Errors"),
+                (LogLevel::Warn, "Warnings"),
+                (LogLevel::Info, "Info"),
+                (LogLevel::Debug, "All"),
+            ];
+            for (level, label) in &levels {
+                let active = viewer.filter_level == *level;
+                let lbl = level_label(ui, label, active, *level, c);
+                if lbl.clicked() {
+                    viewer.filter_level = *level;
+                }
+                ui.add_space(SPACE_XS);
             }
-        }
-        ui.separator();
-        ui.label("Search:");
-        ui.text_edit_singleline(&mut viewer.search_text);
-        if ui.button("✕").on_hover_text("Clear search").clicked() {
-            viewer.search_text.clear();
-        }
-        ui.separator();
-        ui.checkbox(&mut viewer.auto_scroll, "Auto-scroll");
-        if ui.button("Clear").clicked() {
-            viewer.store.clear();
-        }
+
+            ui.separator();
+            // Search
+            ui.label(RichText::new("🔍").size(FONT_XS));
+            ui.add(
+                egui::TextEdit::singleline(&mut viewer.search_text)
+                    .hint_text("Filter...")
+                    .desired_width(140.0),
+            );
+            if !viewer.search_text.is_empty() {
+                if ui.small_button(RichText::new("✕").size(FONT_XS)).clicked() {
+                    viewer.search_text.clear();
+                }
+            }
+
+            ui.separator();
+            ui.checkbox(&mut viewer.auto_scroll, "Auto");
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui
+                    .small_button(RichText::new("Clear").size(FONT_XS))
+                    .clicked()
+                {
+                    viewer.store.clear();
+                }
+            });
+        });
     });
-    ui.separator();
+    ui.add_space(SPACE_XS);
 
     // Filtered entries
     let filtered: Vec<&LogEntry> = viewer
@@ -180,44 +214,97 @@ pub fn log_viewer_ui(ui: &mut egui::Ui, viewer: &mut LogViewer) {
 
     scroll.show(ui, |ui| {
         if filtered.is_empty() {
-            ui.label(
-                RichText::new("No log entries matching filter")
-                    .color(Color32::GRAY)
-                    .size(12.0),
-            );
+            ui.vertical_centered(|ui| {
+                ui.add_space(SPACE_SM * 3.0);
+                ui.label(
+                    RichText::new("No matching entries")
+                        .size(FONT_SM)
+                        .color(c.text_muted),
+                );
+            });
             return;
         }
 
         for entry in &filtered {
             ui.horizontal(|ui| {
+                // Timestamp
                 ui.label(
                     RichText::new(&entry.timestamp)
-                        .color(Color32::DARK_GRAY)
-                        .size(11.0)
+                        .size(FONT_XS)
+                        .color(c.text_muted)
                         .monospace(),
                 );
-                ui.add_space(4.0);
+                ui.add_space(SPACE_XS);
+
+                // Level badge
+                let level_color = match entry.level {
+                    LogLevel::Error => c.danger,
+                    LogLevel::Warn => c.warning,
+                    LogLevel::Info => c.accent,
+                    LogLevel::Debug => c.text_muted,
+                };
                 ui.label(
                     RichText::new(entry.level.as_str())
-                        .color(entry.level.color())
-                        .size(11.0)
+                        .size(FONT_XS)
+                        .color(level_color)
                         .strong()
                         .monospace(),
                 );
-                ui.add_space(4.0);
+                ui.add_space(SPACE_XS);
+
+                // Module
                 ui.label(
                     RichText::new(&entry.module)
-                        .color(Color32::GRAY)
-                        .size(11.0)
+                        .size(FONT_XS)
+                        .color(c.text_muted)
                         .monospace(),
                 );
-                ui.add_space(4.0);
-                ui.label(
-                    RichText::new(&entry.message)
-                        .size(11.0)
-                        .monospace(),
-                );
+                ui.add_space(SPACE_XS);
+
+                // Message
+                ui.label(RichText::new(&entry.message).size(FONT_XS).monospace());
             });
         }
     });
 }
+
+/// Render a selectable level filter label.
+fn level_label(
+    ui: &mut egui::Ui,
+    label: &str,
+    active: bool,
+    level: LogLevel,
+    c: &'static crate::design::Colors,
+) -> egui::Response {
+    let fg = if active {
+        match level {
+            LogLevel::Error => c.danger,
+            LogLevel::Warn => c.warning,
+            LogLevel::Info => c.accent,
+            LogLevel::Debug => c.text_primary,
+        }
+    } else {
+        c.text_muted
+    };
+    let bg = if active {
+        match level {
+            LogLevel::Error => c.danger_dim,
+            LogLevel::Warn => c.warning_dim,
+            LogLevel::Info => c.accent_dim,
+            LogLevel::Debug => Color32::TRANSPARENT,
+        }
+    } else {
+        Color32::TRANSPARENT
+    };
+
+    egui::Frame::default()
+        .fill(bg)
+        .corner_radius(crate::design::RADIUS_SM)
+        .inner_margin(egui::vec2(SPACE_XS + 2.0, 1.0))
+        .show(ui, |ui| {
+            ui.label(RichText::new(label).size(FONT_XS).color(fg))
+        })
+        .response
+}
+
+use egui::Color32;
