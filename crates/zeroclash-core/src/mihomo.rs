@@ -3,7 +3,7 @@
 //! Communicates with a running mihomo instance via its REST API and manages the
 //! sidecar process lifecycle (start, stop, restart).
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
@@ -298,9 +298,12 @@ impl CoreManager {
 
     /// Start the mihomo core as a child process.
     pub async fn start(&self) -> Result<()> {
-        let mut guard = self.child.lock().await;
-        if guard.is_some() {
-            anyhow::bail!("Core is already running");
+        {
+            let guard = self.child.lock().await;
+            if guard.is_some() {
+                drop(guard);
+                anyhow::bail!("Core is already running");
+            }
         }
 
         let child = Command::new(&self.core_path)
@@ -314,14 +317,17 @@ impl CoreManager {
             .spawn()
             .with_context(|| format!("Failed to start core at {:?}", self.core_path))?;
 
-        *guard = Some(child);
+        *self.child.lock().await = Some(child);
         Ok(())
     }
 
     /// Stop the mihomo core.
     pub async fn stop(&self) -> Result<()> {
-        let mut guard = self.child.lock().await;
-        if let Some(mut child) = guard.take() {
+        let child = {
+            let mut guard = self.child.lock().await;
+            guard.take()
+        };
+        if let Some(mut child) = child {
             child.kill().await.context("Failed to kill core process")?;
         }
         Ok(())

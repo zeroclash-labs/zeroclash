@@ -48,10 +48,10 @@ impl HotkeyManager {
                 std::thread::spawn(move || {
                     let receiver = GlobalHotKeyEvent::receiver();
                     loop {
-                        if let Ok(event) = receiver.try_recv() {
-                            if event.id == hk_id {
-                                let _ = tx_clone.send(HotkeyAction::ToggleProxy);
-                            }
+                        if let Ok(event) = receiver.try_recv()
+                            && event.id == hk_id
+                        {
+                            let _ = tx_clone.send(HotkeyAction::ToggleProxy);
                         }
                         std::thread::sleep(std::time::Duration::from_millis(100));
                     }
@@ -65,14 +65,14 @@ impl HotkeyManager {
             );
             let hk2_id = hk2.id;
             if mgr.register(hk2).is_ok() {
-                let tx_clone2 = tx.clone();
+                let tx_clone2 = tx;
                 std::thread::spawn(move || {
                     let receiver = GlobalHotKeyEvent::receiver();
                     loop {
-                        if let Ok(event) = receiver.try_recv() {
-                            if event.id == hk2_id {
-                                let _ = tx_clone2.send(HotkeyAction::ShowWindow);
-                            }
+                        if let Ok(event) = receiver.try_recv()
+                            && event.id == hk2_id
+                        {
+                            let _ = tx_clone2.send(HotkeyAction::ShowWindow);
                         }
                         std::thread::sleep(std::time::Duration::from_millis(100));
                     }

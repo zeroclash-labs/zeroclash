@@ -57,10 +57,10 @@ pub fn use_sort(config: Mapping) -> Mapping {
         .copied()
         .collect();
     for (key, value) in &config {
-        if let Some(k) = key.as_str() {
-            if !supported.contains(k) {
-                ret.insert(key.clone(), value.clone());
-            }
+        if let Some(k) = key.as_str()
+            && !supported.contains(k)
+        {
+            ret.insert(key.clone(), value.clone());
         }
     }
 

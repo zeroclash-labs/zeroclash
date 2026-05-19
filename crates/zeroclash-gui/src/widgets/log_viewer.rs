@@ -14,7 +14,7 @@ pub enum LogLevel {
 }
 
 impl LogLevel {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Error => "ERR",
             Self::Warn => "WRN",
@@ -23,7 +23,7 @@ impl LogLevel {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s.to_uppercase().as_str() {
             "ERROR" | "ERR" => Some(Self::Error),
             "WARN" | "WARNING" | "WRN" => Some(Self::Warn),
@@ -170,10 +170,10 @@ pub fn log_viewer_ui(ui: &mut egui::Ui, viewer: &mut LogViewer) {
                     .hint_text("Filter...")
                     .desired_width(140.0),
             );
-            if !viewer.search_text.is_empty() {
-                if ui.small_button(RichText::new("✕").size(FONT_XS)).clicked() {
-                    viewer.search_text.clear();
-                }
+            if !viewer.search_text.is_empty()
+                && ui.small_button(RichText::new("✕").size(FONT_XS)).clicked()
+            {
+                viewer.search_text.clear();
             }
 
             ui.separator();

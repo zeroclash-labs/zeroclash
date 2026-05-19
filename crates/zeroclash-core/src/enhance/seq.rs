@@ -62,7 +62,7 @@ pub fn use_seq(seq: SeqMap, mut config: Mapping, field: &str) -> Mapping {
                 Value::Mapping(m) => m
                     .get("name")
                     .and_then(Value::as_str)
-                    .map_or(true, |name| !delete.iter().any(|d| d.as_str() == name)),
+                    .is_none_or(|name| !delete.iter().any(|d| d.as_str() == name)),
                 _ => true,
             })
             .cloned()

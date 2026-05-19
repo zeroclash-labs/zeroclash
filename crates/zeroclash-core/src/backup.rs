@@ -1,7 +1,7 @@
 //! Backup and restore for profiles, configs, and runtime files.
 //! Supports local zip archives and WebDAV remote storage.
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -18,12 +18,12 @@ pub struct BackupEntry {
 }
 
 impl BackupManager {
-    pub fn new(data_dir: PathBuf) -> Self {
+    pub const fn new(data_dir: PathBuf) -> Self {
         Self { data_dir }
     }
 
     /// Create a local zip backup of profiles and configs.
-    pub async fn create_local_backup(&self) -> Result<BackupEntry> {
+    pub fn create_local_backup(&self) -> Result<BackupEntry> {
         let ts = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default()
@@ -35,7 +35,7 @@ impl BackupManager {
         let name = format!("zeroclash-backup-{ts}.zip");
         let path = backup_dir.join(&name);
 
-        let files_to_backup = self.collect_backup_files()?;
+        let files_to_backup = self.collect_backup_files();
 
         let file = std::fs::File::create(&path)?;
         let mut zip = zip::ZipWriter::new(file);
@@ -72,7 +72,7 @@ impl BackupManager {
         for entry in std::fs::read_dir(&backup_dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().map_or(false, |e| e == "zip") {
+            if path.extension().is_some_and(|e| e == "zip") {
                 let meta = entry.metadata()?;
                 let name = entry.file_name().to_string_lossy().to_string();
                 let ts = meta
@@ -88,12 +88,12 @@ impl BackupManager {
                 });
             }
         }
-        entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        entries.sort_by_key(|b| std::cmp::Reverse(b.timestamp));
         Ok(entries)
     }
 
     /// Restore from a local backup by name.
-    pub async fn restore_local_backup(&self, name: &str) -> Result<()> {
+    pub fn restore_local_backup(&self, name: &str) -> Result<()> {
         let path = self.data_dir.join("backups").join(name);
         if !path.exists() {
             anyhow::bail!("Backup {name} not found");
@@ -176,7 +176,7 @@ impl BackupManager {
         Ok(())
     }
 
-    fn collect_backup_files(&self) -> Result<Vec<(String, PathBuf)>> {
+    fn collect_backup_files(&self) -> Vec<(String, PathBuf)> {
         let mut files = Vec::new();
 
         // Profiles YAML
@@ -199,6 +199,6 @@ impl BackupManager {
             }
         }
 
-        Ok(files)
+        files
     }
 }

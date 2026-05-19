@@ -3,7 +3,7 @@
 //! Handles profile items (remote subscriptions, local files, merge, script, rules, proxies, groups),
 //! CRUD operations, HTTP subscription updates, and YAML file persistence.
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context as _, Result, bail};
 use serde::{Deserialize, Serialize};
 use serde_yaml_ng::Mapping;
 use std::path::PathBuf;

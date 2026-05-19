@@ -37,7 +37,7 @@ impl ServiceManager {
     }
 
     /// Uninstall the core service.
-    pub fn uninstall(&self) -> Result<()> {
+    pub const fn uninstall(&self) -> Result<()> {
         #[cfg(target_os = "windows")]
         {
             self.uninstall_windows()?;
@@ -50,7 +50,7 @@ impl ServiceManager {
     }
 
     /// Check if service is installed.
-    pub fn is_installed(&self) -> bool {
+    pub const fn is_installed(&self) -> bool {
         #[cfg(target_os = "windows")]
         {
             self.check_windows_installed()

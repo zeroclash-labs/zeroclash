@@ -21,7 +21,7 @@ pub enum UnlockStatus {
 }
 
 impl UnlockStatus {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Unlocked => "YES",
             Self::Locked => "NO",
@@ -47,10 +47,12 @@ const CHECKERS: &[(&str, &str, &str)] = &[
 /// Run all media unlock checks via the given proxy URL.
 pub async fn check_all(proxy_url: &str) -> Vec<UnlockResult> {
     let client = match reqwest::Client::builder()
-        .proxy(
-            reqwest::Proxy::all(proxy_url)
-                .unwrap_or_else(|_| reqwest::Proxy::http("http://127.0.0.1:7899").unwrap()),
-        )
+        .proxy(reqwest::Proxy::all(proxy_url).unwrap_or_else(|_| {
+            reqwest::Proxy::http("http://127.0.0.1:7899").unwrap_or_else(|_| {
+                reqwest::Proxy::http("http://127.0.0.1:7890")
+                    .unwrap_or_else(|_| reqwest::Proxy::custom(|_| None::<reqwest::Url>))
+            })
+        }))
         .timeout(std::time::Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
         .build()
@@ -126,7 +128,7 @@ async fn check_single(client: &reqwest::Client, url: &str) -> Result<Option<Stri
                 None
             };
 
-            Ok(region.or(Some("Redirect".into())))
+            Ok(region.or_else(|| Some("Redirect".into())))
         }
         // 403/451: geo-restricted
         403 | 451 => Err(anyhow::anyhow!("geo-restricted")),

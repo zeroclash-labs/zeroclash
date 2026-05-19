@@ -1,6 +1,6 @@
 //! Real-time connection monitoring via mihomo WebSocket stream.
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -153,7 +153,7 @@ impl ConnectionStore {
     /// Get all connections sorted by upload+download (descending by default).
     pub fn all_sorted(&self) -> Vec<&ConnEntry> {
         let mut entries: Vec<&ConnEntry> = self.connections.values().collect();
-        entries.sort_by(|a, b| (b.upload + b.download).cmp(&(a.upload + a.download)));
+        entries.sort_by_key(|e| std::cmp::Reverse(e.upload + e.download));
         entries
     }
 
@@ -199,7 +199,7 @@ pub fn spawn_connection_stream(
 }
 
 async fn connect_and_stream(url: &str, store: &SharedConnStore) -> Result<()> {
-    use futures_util::StreamExt;
+    use futures_util::StreamExt as _;
     let (ws_stream, _) = tokio_tungstenite::connect_async(url)
         .await
         .context("connect to connection WebSocket")?;

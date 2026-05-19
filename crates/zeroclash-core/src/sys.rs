@@ -1,6 +1,6 @@
 //! System integration utilities: auto-start, singleton instance, system proxy, notifications.
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use std::path::PathBuf;
 
 // ── Auto‑start ─────────────────────────────────────────────────────────────

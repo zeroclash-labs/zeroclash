@@ -4,7 +4,7 @@ use egui::{Color32, RichText};
 use zeroclash_core::media_unlock::{UnlockResult, UnlockStatus, check_all};
 
 /// Renders the media unlock checker page.
-pub fn unlock_page_ui(ui: &mut egui::Ui, results: &mut Vec<UnlockResult>, checking: &mut bool) {
+pub fn unlock_page_ui(ui: &mut egui::Ui, results: &mut [UnlockResult], checking: &mut bool) {
     ui.heading("Media Unlock Checker");
     ui.separator();
 

@@ -20,7 +20,7 @@ impl Default for YamlEditor {
 }
 
 impl YamlEditor {
-    pub fn new(content: String) -> Self {
+    pub const fn new(content: String) -> Self {
         Self {
             content,
             error_message: None,

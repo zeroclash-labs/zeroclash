@@ -149,7 +149,7 @@ fn use_script_sync(
                     outputs
                         .lock()
                         .push(("exception".into(), format!("Script parse error: {e}")));
-                    Ok((config.clone(), outputs.lock().to_vec()))
+                    Ok((config, outputs.lock().to_vec()))
                 }
             }
         }

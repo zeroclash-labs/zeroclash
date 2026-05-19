@@ -11,14 +11,20 @@ pub struct ImportDialog {
     pub visible: bool,
 }
 
+impl Default for ImportDialog {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ImportDialog {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             url: String::new(),
             visible: false,
         }
     }
-    pub fn show(&self) -> bool {
+    pub const fn show(&self) -> bool {
         self.visible
     }
     pub fn open(&mut self) {

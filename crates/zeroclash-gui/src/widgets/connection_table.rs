@@ -162,11 +162,11 @@ pub fn connection_table_ui(
         });
 
     // Detail panel for selected connection
-    if let Some(ref sel_id) = selected_id.clone() {
-        if let Some(conn) = connections.iter().find(|c| c.id == *sel_id) {
-            ui.add_space(SPACE_SM);
-            connection_detail_ui(ui, conn, c);
-        }
+    if let Some(ref sel_id) = selected_id.clone()
+        && let Some(conn) = connections.iter().find(|c| c.id == *sel_id)
+    {
+        ui.add_space(SPACE_SM);
+        connection_detail_ui(ui, conn, c);
     }
 }
 

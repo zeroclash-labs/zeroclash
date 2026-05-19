@@ -97,6 +97,7 @@ impl ZeroClashApp {
 }
 
 impl ApplicationHandler for ZeroClashApp {
+    #[allow(clippy::expect_used)]
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.state.is_some() {
             return;
@@ -106,7 +107,9 @@ impl ApplicationHandler for ZeroClashApp {
             .with_inner_size(winit::dpi::LogicalSize::new(1280.0, 840.0));
         let window = Arc::new(event_loop.create_window(wa).expect("window"));
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
-        let surface = instance.create_surface(window.clone()).expect("surface");
+        let surface = instance
+            .create_surface(Arc::clone(&window))
+            .expect("surface");
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
@@ -153,7 +156,7 @@ impl ApplicationHandler for ZeroClashApp {
             Err(e) => lv.push(LogLevel::Error, "sys", &format!("Singleton: {e}")),
         }
         let wv = Arc::new(AtomicBool::new(true));
-        let tray = SystemTray::new(wv.clone())
+        let tray = SystemTray::new(Arc::clone(&wv))
             .map_err(|e| lv.push(LogLevel::Warn, "tray", &format!("Tray: {e}")))
             .ok();
         notify("ZeroClash", "Application started");
@@ -345,7 +348,9 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
                 match pollster::block_on(store.fetch_remote(&url, None, None)) {
                     Ok(item) => {
                         let name = item.name.clone().unwrap_or_default();
-                        let mut sm = state.profile_store.take().unwrap();
+                        let Some(mut sm) = state.profile_store.take() else {
+                            unreachable!("just checked")
+                        };
                         let _ = sm.add_item(item);
                         let _ = pollster::block_on(sm.save());
                         state.profile_store = Some(sm);
@@ -434,17 +439,17 @@ fn process_command(state: &mut AppState, cmd: UiCommand) {
         }
         UiCommand::ToggleAutoStart => { /* ... same as before, omitted for brevity */ }
         UiCommand::RefreshProxies => {
-            if let Some(ref c) = state.client {
-                if let Ok(v) = pollster::block_on(c.proxies()) {
-                    state.proxy_groups = parse_proxy_groups(&v);
-                }
+            if let Some(ref c) = state.client
+                && let Ok(v) = pollster::block_on(c.proxies())
+            {
+                state.proxy_groups = parse_proxy_groups(&v);
             }
         }
         UiCommand::RefreshConnections => {
-            if let Some(ref c) = state.client {
-                if let Ok(v) = pollster::block_on(c.connections()) {
-                    state.connections = parse_connections(&v);
-                }
+            if let Some(ref c) = state.client
+                && let Ok(v) = pollster::block_on(c.connections())
+            {
+                state.connections = parse_connections(&v);
             }
         }
     }
@@ -886,11 +891,9 @@ fn parse_proxy_groups(v: &serde_json::Value) -> Vec<ProxyGroup> {
                     .and_then(|h| h.as_array())
                     .map(|arr| {
                         arr.iter()
-                            .filter_map(|v| {
-                                Some(zeroclash_core::mihomo::DelayHistory {
-                                    time: String::new(),
-                                    delay: v.get("delay").and_then(|d| d.as_u64()).unwrap_or(0),
-                                })
+                            .map(|v| zeroclash_core::mihomo::DelayHistory {
+                                time: String::new(),
+                                delay: v.get("delay").and_then(|d| d.as_u64()).unwrap_or(0),
                             })
                             .collect()
                     })
