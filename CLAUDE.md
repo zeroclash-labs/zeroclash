@@ -18,7 +18,7 @@ cargo run -p zeroclash               # launch the GUI
 cargo run -p zeroclash-cli -- --help # CLI usage
 ```
 
-CI runs `check`/`test`/`clippy`/`fmt` on push/PR via `.github/workflows/ci.yml`. Linux CI installs `libgtk-3-dev libxdo-dev libappindicator3-dev libayatana-appindicator3-dev`.
+CI runs `check`/`test`/`clippy`/`fmt` on push/PR via `.github/workflows/ci.yml`. Linux CI installs `libgtk-3-dev libxdo-dev` plus `libayatana-appindicator3-dev` (fallback to `libappindicator3-dev` on older Ubuntu).
 
 ## Architecture
 
@@ -32,7 +32,7 @@ All business logic lives in `zeroclash-core` — a platform-agnostic crate with 
 ## Gotchas
 
 - Edition **2024** — Rust edition-specific syntax expected (`let` chains, `unsafe` blocks).
-- Linux builds need system deps: `libgtk-3-dev libxdo-dev libappindicator3-dev`.
+- Linux builds need system deps: `libgtk-3-dev libxdo-dev` plus `libayatana-appindicator3-dev` (Ubuntu 24.04+) or `libappindicator3-dev` (Ubuntu < 24.04).
 - `egui_plot` has a **version conflict** with egui 0.34 (depends on egui 0.33). Traffic graphs use native egui bars instead.
 - Clippy `deny` lints include: `unimplemented`, `panic`, `unused_async`, `future_not_send`, `await_holding_lock`.
 - `.exclude/` contains the reference clash-verge-rev source (not a submodule, manually placed).

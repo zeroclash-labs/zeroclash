@@ -26,7 +26,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libxdo-dev libappindicator3-dev libayatana-appindicator3-dev
+          sudo apt-get install -y libgtk-3-dev libxdo-dev
+          sudo apt-get install -y libayatana-appindicator3-dev || sudo apt-get install -y libappindicator3-dev
       - run: cargo check --workspace --all-features
 
   test:
@@ -44,7 +45,8 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libxdo-dev libappindicator3-dev libayatana-appindicator3-dev
+          sudo apt-get install -y libgtk-3-dev libxdo-dev
+          sudo apt-get install -y libayatana-appindicator3-dev || sudo apt-get install -y libappindicator3-dev
       - run: cargo test --workspace
 
   clippy:
@@ -59,7 +61,8 @@ jobs:
       - name: Install Linux deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libxdo-dev libappindicator3-dev libayatana-appindicator3-dev
+          sudo apt-get install -y libgtk-3-dev libxdo-dev
+          sudo apt-get install -y libayatana-appindicator3-dev || sudo apt-get install -y libappindicator3-dev
       - run: cargo clippy --workspace --all-features -- -D warnings
 
   fmt:
