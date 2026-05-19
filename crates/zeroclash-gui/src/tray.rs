@@ -20,9 +20,7 @@ pub struct SystemTray {
 
 impl SystemTray {
     /// Create a system tray with menu items. Events are polled via `poll_events()`.
-    pub fn new(
-        visible: Arc<AtomicBool>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(visible: Arc<AtomicBool>) -> Result<Self, Box<dyn std::error::Error>> {
         // 32x32 blue icon
         let mut rgba = Vec::with_capacity(32 * 32 * 4);
         for _ in 0..(32 * 32) {

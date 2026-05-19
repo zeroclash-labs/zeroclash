@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub type SystemLimiter = Limiter<SystemClock>;
@@ -158,7 +158,10 @@ mod extra_tests {
 
         mock.0.store(4000, Ordering::SeqCst);
 
-        assert!(limiter.check(), "Should pass and reset when time moves backward");
+        assert!(
+            limiter.check(),
+            "Should pass and reset when time moves backward"
+        );
 
         assert_eq!(limiter.last_run_ms.load(Ordering::SeqCst), 4000);
     }

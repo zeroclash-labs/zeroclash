@@ -20,9 +20,8 @@ pub async fn use_script(
     config: Mapping,
     profile_name: String,
 ) -> Result<(Mapping, Vec<(String, String)>)> {
-    let handle = tokio::task::spawn_blocking(move || {
-        use_script_sync(&script, &config, &profile_name)
-    });
+    let handle =
+        tokio::task::spawn_blocking(move || use_script_sync(&script, &config, &profile_name));
 
     match tokio::time::timeout(SCRIPT_TIMEOUT, handle).await {
         Ok(Ok(result)) => result,
@@ -37,9 +36,9 @@ fn use_script_sync(
     name: &str,
 ) -> Result<(Mapping, Vec<(String, String)>)> {
     use boa_engine::Context;
-    use boa_engine::Source;
     use boa_engine::JsString;
     use boa_engine::JsValue;
+    use boa_engine::Source;
     use boa_engine::native_function::NativeFunction;
 
     let mut context = Context::default();
@@ -59,40 +58,42 @@ fn use_script_sync(
         2,
         // SAFETY: The closure only accesses Arc<Mutex<>> which is Send+Sync safe.
         // No mutable static state or FFI boundaries are crossed.
-        unsafe { NativeFunction::from_closure(
-            move |_: &JsValue, args: &[JsValue], context: &mut Context| {
-                let level = args.first().ok_or_else(|| {
-                    boa_engine::JsError::from_opaque(JsString::from("Missing level").into())
-                })?;
-                let level = level.to_string(context)?.to_std_string().map_err(|_| {
-                    boa_engine::JsError::from_opaque(JsString::from("Invalid level").into())
-                })?;
+        unsafe {
+            NativeFunction::from_closure(
+                move |_: &JsValue, args: &[JsValue], context: &mut Context| {
+                    let level = args.first().ok_or_else(|| {
+                        boa_engine::JsError::from_opaque(JsString::from("Missing level").into())
+                    })?;
+                    let level = level.to_string(context)?.to_std_string().map_err(|_| {
+                        boa_engine::JsError::from_opaque(JsString::from("Invalid level").into())
+                    })?;
 
-                let data = args.get(1).ok_or_else(|| {
-                    boa_engine::JsError::from_opaque(JsString::from("Missing data").into())
-                })?;
-                let data = data.to_string(context)?.to_std_string().map_err(|_| {
-                    boa_engine::JsError::from_opaque(JsString::from("Invalid data").into())
-                })?;
+                    let data = args.get(1).ok_or_else(|| {
+                        boa_engine::JsError::from_opaque(JsString::from("Missing data").into())
+                    })?;
+                    let data = data.to_string(context)?.to_std_string().map_err(|_| {
+                        boa_engine::JsError::from_opaque(JsString::from("Invalid data").into())
+                    })?;
 
-                if outputs_clone.lock().len() >= MAX_OUTPUTS {
-                    return Err(boa_engine::JsError::from_opaque(
-                        JsString::from("Max outputs exceeded").into(),
-                    ));
-                }
-                let mut size = total_size_clone.lock();
-                let new_size = *size + level.len() + data.len();
-                if new_size > MAX_OUTPUT_SIZE {
-                    return Err(boa_engine::JsError::from_opaque(
-                        JsString::from("Max output size exceeded").into(),
-                    ));
-                }
-                *size = new_size;
-                drop(size);
-                outputs_clone.lock().push((level, data));
-                Ok(JsValue::undefined())
-            },
-        ) },
+                    if outputs_clone.lock().len() >= MAX_OUTPUTS {
+                        return Err(boa_engine::JsError::from_opaque(
+                            JsString::from("Max outputs exceeded").into(),
+                        ));
+                    }
+                    let mut size = total_size_clone.lock();
+                    let new_size = *size + level.len() + data.len();
+                    if new_size > MAX_OUTPUT_SIZE {
+                        return Err(boa_engine::JsError::from_opaque(
+                            JsString::from("Max output size exceeded").into(),
+                        ));
+                    }
+                    *size = new_size;
+                    drop(size);
+                    outputs_clone.lock().push((level, data));
+                    Ok(JsValue::undefined())
+                },
+            )
+        },
     );
 
     // Set up console object
@@ -143,11 +144,11 @@ fn use_script_sync(
             }
 
             match serde_json::from_str::<Mapping>(result.trim_matches('"')) {
-                Ok(config) => {
-                    Ok((use_lowercase(&config), outputs.lock().to_vec()))
-                }
+                Ok(config) => Ok((use_lowercase(&config), outputs.lock().to_vec())),
                 Err(e) => {
-                    outputs.lock().push(("exception".into(), format!("Script parse error: {e}")));
+                    outputs
+                        .lock()
+                        .push(("exception".into(), format!("Script parse error: {e}")));
                     Ok((config.clone(), outputs.lock().to_vec()))
                 }
             }

@@ -12,5 +12,5 @@ pub use chain::{ChainItem, ChainType};
 pub use field::{use_keys, use_lowercase, use_sort};
 pub use merge::use_merge;
 pub use script::use_script;
-pub use seq::{use_seq, SeqMap};
+pub use seq::{SeqMap, use_seq};
 pub use tun::use_tun;

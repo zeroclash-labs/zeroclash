@@ -84,8 +84,7 @@ impl ProfileStore {
             let content = tokio::fs::read_to_string(&config_path)
                 .await
                 .context("read profiles.yaml")?;
-            serde_yaml_ng::from_str::<IProfiles>(&content)
-                .unwrap_or_default()
+            serde_yaml_ng::from_str::<IProfiles>(&content).unwrap_or_default()
         } else {
             IProfiles::default()
         };
@@ -118,7 +117,11 @@ impl ProfileStore {
             .danger_accept_invalid_certs(false)
             .build()?;
 
-        let resp = client.get(url).send().await.context("fetch remote profile")?;
+        let resp = client
+            .get(url)
+            .send()
+            .await
+            .context("fetch remote profile")?;
 
         if !resp.status().is_success() {
             bail!("HTTP {} fetching remote profile", resp.status());
@@ -353,14 +356,19 @@ mod tests {
 
     async fn new_test_store() -> (ProfileStore, TempDir) {
         let tmp = TempDir::new().expect("tempdir");
-        let store = ProfileStore::load(tmp.path().to_path_buf()).await.expect("load");
+        let store = ProfileStore::load(tmp.path().to_path_buf())
+            .await
+            .expect("load");
         (store, tmp)
     }
 
     #[tokio::test]
     async fn test_create_local_profile() {
         let (store, _tmp) = new_test_store().await;
-        let item = store.create_local("Test", "proxies:\n  - name: node1").await.expect("create");
+        let item = store
+            .create_local("Test", "proxies:\n  - name: node1")
+            .await
+            .expect("create");
         assert_eq!(item.name.as_deref(), Some("Test"));
         assert_eq!(item.itype.as_deref(), Some("local"));
         assert!(item.uid.is_some());
@@ -370,7 +378,10 @@ mod tests {
     #[tokio::test]
     async fn test_add_and_preview() {
         let (mut store, _tmp) = new_test_store().await;
-        let item = store.create_local("MyProfile", "proxies: []").await.unwrap();
+        let item = store
+            .create_local("MyProfile", "proxies: []")
+            .await
+            .unwrap();
         store.add_item(item).unwrap();
         store.save().await.unwrap();
 

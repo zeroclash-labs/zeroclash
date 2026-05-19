@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use zeroclash_logging::{logging, Type};
+use zeroclash_logging::{Type, logging};
 
 use crate::RUNTIME;
 
@@ -16,7 +16,12 @@ where
             let mut ctrl_c = match tokio::signal::windows::ctrl_c() {
                 Ok(s) => s,
                 Err(e) => {
-                    logging!(error, Type::SystemSignal, "Failed to register Ctrl+C: {}", e);
+                    logging!(
+                        error,
+                        Type::SystemSignal,
+                        "Failed to register Ctrl+C: {}",
+                        e
+                    );
                     return;
                 }
             };
@@ -24,7 +29,12 @@ where
             let mut ctrl_close = match tokio::signal::windows::ctrl_close() {
                 Ok(s) => s,
                 Err(e) => {
-                    logging!(error, Type::SystemSignal, "Failed to register Ctrl+Close: {}", e);
+                    logging!(
+                        error,
+                        Type::SystemSignal,
+                        "Failed to register Ctrl+Close: {}",
+                        e
+                    );
                     return;
                 }
             };
@@ -45,7 +55,12 @@ where
             let mut ctrl_logoff = match tokio::signal::windows::ctrl_logoff() {
                 Ok(s) => s,
                 Err(e) => {
-                    logging!(error, Type::SystemSignal, "Failed to register Ctrl+Logoff: {}", e);
+                    logging!(
+                        error,
+                        Type::SystemSignal,
+                        "Failed to register Ctrl+Logoff: {}",
+                        e
+                    );
                     return;
                 }
             };

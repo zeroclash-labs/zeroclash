@@ -1,5 +1,5 @@
 use std::sync::OnceLock;
-use zeroclash_logging::{logging, Type};
+use zeroclash_logging::{Type, logging};
 
 #[cfg(unix)]
 mod unix;
@@ -13,8 +13,11 @@ where
     F: Fn() -> Fut + Send + Sync + 'static,
     Fut: Future + Send + 'static,
 {
-    RUNTIME.get_or_init(
-        || match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+    RUNTIME.get_or_init(|| {
+        match tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
             Ok(rt) => Some(rt),
             Err(e) => {
                 logging!(
@@ -25,8 +28,8 @@ where
                 );
                 None
             }
-        },
-    );
+        }
+    });
 
     #[cfg(unix)]
     unix::register(f);

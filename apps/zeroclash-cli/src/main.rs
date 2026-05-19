@@ -6,8 +6,8 @@ use clap::{Parser, Subcommand};
 use serde_json::Value;
 use std::path::PathBuf;
 
-use zeroclash_core::mihomo::MihomoClient;
 use zeroclash_core::ProfileStore;
+use zeroclash_core::mihomo::MihomoClient;
 
 /// ZeroClash CLI — manage the mihomo proxy core from the command line.
 #[derive(Parser)]
@@ -124,12 +124,10 @@ async fn main() -> anyhow::Result<()> {
 
 async fn handle_core(client: &MihomoClient, action: CoreAction) -> anyhow::Result<()> {
     match action {
-        CoreAction::Status => {
-            match client.version().await {
-                Ok(v) => println!("Core running — version: {v}"),
-                Err(_) => println!("Core not reachable"),
-            }
-        }
+        CoreAction::Status => match client.version().await {
+            Ok(v) => println!("Core running — version: {v}"),
+            Err(_) => println!("Core not reachable"),
+        },
         CoreAction::Mode { mode } => {
             client.switch_mode(&mode).await?;
             println!("Mode switched to: {mode}");
@@ -189,8 +187,7 @@ async fn handle_config(client: &MihomoClient, action: ConfigAction) -> anyhow::R
 // ── Profile handlers ────────────────────────────────────────────────────────
 
 async fn handle_profile(action: ProfileAction) -> anyhow::Result<()> {
-    let data_dir = dirs_next()
-        .join("zeroclash");
+    let data_dir = dirs_next().join("zeroclash");
     std::fs::create_dir_all(&data_dir)?;
 
     match action {

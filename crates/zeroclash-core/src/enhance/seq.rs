@@ -81,19 +81,22 @@ pub fn use_seq(seq: SeqMap, mut config: Mapping, field: &str) -> Mapping {
         let mut appended_to_selector = false;
         for group in groups {
             if let Value::Mapping(group_map) = group {
-                let mut proxies_seq = group_map
-                    .get("proxies")
-                    .and_then(Value::as_sequence)
-                    .map(|proxies| {
-                        proxies
-                            .iter()
-                            .filter(|p| match p {
-                                Value::String(name) => !delete.iter().any(|d| d.as_str() == name),
-                                _ => true,
-                            })
-                            .cloned()
-                            .collect::<Sequence>()
-                    });
+                let mut proxies_seq =
+                    group_map
+                        .get("proxies")
+                        .and_then(Value::as_sequence)
+                        .map(|proxies| {
+                            proxies
+                                .iter()
+                                .filter(|p| match p {
+                                    Value::String(name) => {
+                                        !delete.iter().any(|d| d.as_str() == name)
+                                    }
+                                    _ => true,
+                                })
+                                .cloned()
+                                .collect::<Sequence>()
+                        });
 
                 if !appended_to_selector
                     && !added_proxy_names.is_empty()
@@ -181,12 +184,20 @@ proxy-groups:
             .as_sequence()
             .expect("proxy-groups seq");
         let g1 = groups[0].as_mapping().expect("group mapping");
-        let g1p = g1.get("proxies").expect("group proxies").as_sequence().unwrap();
+        let g1p = g1
+            .get("proxies")
+            .expect("group proxies")
+            .as_sequence()
+            .unwrap();
         assert_eq!(g1p.len(), 1);
         assert_eq!(g1p[0].as_str().unwrap(), "proxy2");
 
         let g2 = groups[1].as_mapping().expect("group mapping");
-        let g2p = g2.get("proxies").expect("group proxies").as_sequence().unwrap();
+        let g2p = g2
+            .get("proxies")
+            .expect("group proxies")
+            .as_sequence()
+            .unwrap();
         assert_eq!(g2p.len(), 0);
     }
 }

@@ -44,8 +44,8 @@ impl BackupManager {
 
         for (archive_name, file_path) in &files_to_backup {
             if file_path.exists() {
-                let content = std::fs::read(file_path)
-                    .with_context(|| format!("read {file_path:?}"))?;
+                let content =
+                    std::fs::read(file_path).with_context(|| format!("read {file_path:?}"))?;
                 zip.start_file(archive_name, options)?;
                 std::io::Write::write_all(&mut zip, &content)?;
             }
@@ -54,7 +54,11 @@ impl BackupManager {
         let file = zip.finish()?;
         let size = file.metadata()?.len();
 
-        Ok(BackupEntry { name, timestamp: ts, size })
+        Ok(BackupEntry {
+            name,
+            timestamp: ts,
+            size,
+        })
     }
 
     /// List available local backups.
@@ -71,12 +75,17 @@ impl BackupManager {
             if path.extension().map_or(false, |e| e == "zip") {
                 let meta = entry.metadata()?;
                 let name = entry.file_name().to_string_lossy().to_string();
-                let ts = meta.modified()
+                let ts = meta
+                    .modified()
                     .ok()
                     .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
                     .map(|d| d.as_secs())
                     .unwrap_or(0);
-                entries.push(BackupEntry { name, timestamp: ts, size: meta.len() });
+                entries.push(BackupEntry {
+                    name,
+                    timestamp: ts,
+                    size: meta.len(),
+                });
             }
         }
         entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));

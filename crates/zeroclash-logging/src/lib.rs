@@ -1,8 +1,8 @@
 use compact_str::CompactString;
+use flexi_logger::DeferredNow;
 use flexi_logger::filter::LogLineFilter;
 use flexi_logger::writers::FileLogWriter;
 use flexi_logger::writers::LogWriter as _;
-use flexi_logger::DeferredNow;
 use log::Level;
 use log::Record;
 use std::fmt;

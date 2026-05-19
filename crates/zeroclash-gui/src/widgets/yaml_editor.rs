@@ -97,4 +97,3 @@ pub fn yaml_editor_ui(ui: &mut egui::Ui, editor: &mut YamlEditor) {
             });
         });
 }
-

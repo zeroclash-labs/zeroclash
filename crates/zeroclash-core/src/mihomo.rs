@@ -192,9 +192,7 @@ impl MihomoClient {
             .with_context(|| format!("GET {full_url}"))?;
         let body = resp.text().await?;
         let v: Value = serde_json::from_str(&body)?;
-        Ok(v.get("delay")
-            .and_then(|d| d.as_u64())
-            .unwrap_or(0))
+        Ok(v.get("delay").and_then(|d| d.as_u64()).unwrap_or(0))
     }
 
     /// Select a proxy in a selector group.
@@ -324,10 +322,7 @@ impl CoreManager {
     pub async fn stop(&self) -> Result<()> {
         let mut guard = self.child.lock().await;
         if let Some(mut child) = guard.take() {
-            child
-                .kill()
-                .await
-                .context("Failed to kill core process")?;
+            child.kill().await.context("Failed to kill core process")?;
         }
         Ok(())
     }

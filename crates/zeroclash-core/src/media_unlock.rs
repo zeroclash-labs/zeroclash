@@ -48,7 +48,8 @@ const CHECKERS: &[(&str, &str, &str)] = &[
 pub async fn check_all(proxy_url: &str) -> Vec<UnlockResult> {
     let client = match reqwest::Client::builder()
         .proxy(
-            reqwest::Proxy::all(proxy_url).unwrap_or_else(|_| reqwest::Proxy::http("http://127.0.0.1:7899").unwrap()),
+            reqwest::Proxy::all(proxy_url)
+                .unwrap_or_else(|_| reqwest::Proxy::http("http://127.0.0.1:7899").unwrap()),
         )
         .timeout(std::time::Duration::from_secs(5))
         .danger_accept_invalid_certs(true)
@@ -64,7 +65,7 @@ pub async fn check_all(proxy_url: &str) -> Vec<UnlockResult> {
                     status: UnlockStatus::Failed,
                     region: None,
                 })
-                .collect()
+                .collect();
         }
     };
 
@@ -120,9 +121,7 @@ async fn check_single(client: &reqwest::Client, url: &str) -> Result<Option<Stri
                 tld.split('/')
                     .nth(1)
                     .map(|s| s.to_uppercase())
-                    .or_else(|| {
-                        tld.rsplit('.').next().map(|s| s.to_uppercase())
-                    })
+                    .or_else(|| tld.rsplit('.').next().map(|s| s.to_uppercase()))
             } else {
                 None
             };

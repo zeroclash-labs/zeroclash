@@ -65,10 +65,7 @@ impl ConnectionStore {
     }
 
     fn apply_object(&mut self, map: &serde_json::Map<String, Value>) {
-        let id = map
-            .get("id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown");
+        let id = map.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
         if id.is_empty() || id == "unknown" {
             return;
@@ -156,9 +153,7 @@ impl ConnectionStore {
     /// Get all connections sorted by upload+download (descending by default).
     pub fn all_sorted(&self) -> Vec<&ConnEntry> {
         let mut entries: Vec<&ConnEntry> = self.connections.values().collect();
-        entries.sort_by(|a, b| {
-            (b.upload + b.download).cmp(&(a.upload + a.download))
-        });
+        entries.sort_by(|a, b| (b.upload + b.download).cmp(&(a.upload + a.download)));
         entries
     }
 
@@ -182,7 +177,11 @@ pub fn spawn_connection_stream(
 ) -> tokio::task::JoinHandle<()> {
     let url = format!(
         "ws{}://{}/connections",
-        if base_url.starts_with("https") { "s" } else { "" },
+        if base_url.starts_with("https") {
+            "s"
+        } else {
+            ""
+        },
         base_url
             .trim_start_matches("http://")
             .trim_start_matches("https://")

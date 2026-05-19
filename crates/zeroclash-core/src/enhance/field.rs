@@ -51,7 +51,11 @@ pub fn use_sort(config: Mapping) -> Mapping {
     }
 
     // User-defined fields (not handle, not default)
-    let supported: HashSet<&str> = HANDLE_FIELDS.iter().chain(DEFAULT_FIELDS.iter()).copied().collect();
+    let supported: HashSet<&str> = HANDLE_FIELDS
+        .iter()
+        .chain(DEFAULT_FIELDS.iter())
+        .copied()
+        .collect();
     for (key, value) in &config {
         if let Some(k) = key.as_str() {
             if !supported.contains(k) {

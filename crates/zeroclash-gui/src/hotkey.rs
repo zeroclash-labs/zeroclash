@@ -35,10 +35,13 @@ impl HotkeyManager {
         #[cfg(target_os = "macos")]
         if let Some(ref mgr) = manager {
             // Cmd+Shift+P: toggle proxy
-            use global_hotkey::hotkey::{HotKey, Modifiers};
             use global_hotkey::GlobalHotKeyEvent;
+            use global_hotkey::hotkey::{HotKey, Modifiers};
 
-            let hk = HotKey::new(Some(Modifiers::META | Modifiers::SHIFT), global_hotkey::hotkey::Code::KeyP);
+            let hk = HotKey::new(
+                Some(Modifiers::META | Modifiers::SHIFT),
+                global_hotkey::hotkey::Code::KeyP,
+            );
             let hk_id = hk.id;
             if mgr.register(hk).is_ok() {
                 let tx_clone = tx.clone();
@@ -56,7 +59,10 @@ impl HotkeyManager {
             }
 
             // Cmd+Shift+O: show window
-            let hk2 = HotKey::new(Some(Modifiers::META | Modifiers::SHIFT), global_hotkey::hotkey::Code::KeyO);
+            let hk2 = HotKey::new(
+                Some(Modifiers::META | Modifiers::SHIFT),
+                global_hotkey::hotkey::Code::KeyO,
+            );
             let hk2_id = hk2.id;
             if mgr.register(hk2).is_ok() {
                 let tx_clone2 = tx.clone();

@@ -46,12 +46,7 @@ pub fn unlock_page_ui(ui: &mut egui::Ui, results: &mut Vec<UnlockResult>, checki
                         .strong(),
                 );
 
-                ui.label(
-                    result
-                        .region
-                        .as_deref()
-                        .unwrap_or("-"),
-                );
+                ui.label(result.region.as_deref().unwrap_or("-"));
                 ui.end_row();
             }
         });

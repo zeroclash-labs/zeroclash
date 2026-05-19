@@ -24,10 +24,7 @@ pub fn use_merge(merge: &Mapping, config: Mapping) -> Mapping {
 
     deep_merge(&mut config, Value::from(merge));
 
-    config
-        .as_mapping()
-        .cloned()
-        .unwrap_or_else(Mapping::new)
+    config.as_mapping().cloned().unwrap_or_else(Mapping::new)
 }
 
 #[cfg(test)]
