@@ -30,13 +30,15 @@ impl HotkeyManager {
                 let hk_id = hk.id;
                 if manager.register(hk).is_ok() {
                     let tx = tx.clone();
-                    std::thread::spawn(move || loop {
-                        if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv()
-                            && event.id == hk_id
-                        {
-                            let _ = tx.send(HotkeyAction::ToggleProxy);
+                    std::thread::spawn(move || {
+                        loop {
+                            if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv()
+                                && event.id == hk_id
+                            {
+                                let _ = tx.send(HotkeyAction::ToggleProxy);
+                            }
+                            std::thread::sleep(std::time::Duration::from_millis(100));
                         }
-                        std::thread::sleep(std::time::Duration::from_millis(100));
                     });
                 }
 
@@ -44,13 +46,15 @@ impl HotkeyManager {
                 let hk2_id = hk2.id;
                 if manager.register(hk2).is_ok() {
                     let _tx = tx;
-                    std::thread::spawn(move || loop {
-                        if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv()
-                            && event.id == hk2_id
-                        {
-                            let _ = _tx.send(HotkeyAction::ShowWindow);
+                    std::thread::spawn(move || {
+                        loop {
+                            if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv()
+                                && event.id == hk2_id
+                            {
+                                let _ = _tx.send(HotkeyAction::ShowWindow);
+                            }
+                            std::thread::sleep(std::time::Duration::from_millis(100));
                         }
-                        std::thread::sleep(std::time::Duration::from_millis(100));
                     });
                 }
             }
