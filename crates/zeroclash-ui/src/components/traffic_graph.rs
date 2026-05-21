@@ -53,7 +53,11 @@ fn speed_label(label: &str, value: f64, color: gpui::Hsla, c: Colors) -> impl In
             .flex()
             .items_baseline()
             .gap(px(SPACE_XS))
-            .child(div().text_color(c.text_muted).child(SharedString::from(label)))
+            .child(
+                div()
+                    .text_color(c.text_muted)
+                    .child(SharedString::from(label)),
+            )
             .child(
                 div()
                     .text_color(color)
@@ -67,12 +71,8 @@ fn traffic_bars(traffic: &TrafficHistory, c: Colors) -> impl IntoElement {
     let max = traffic.max_upload.max(traffic.max_download).max(1.0);
     let bar_h: f32 = 40.0;
 
-    div()
-        .flex()
-        .gap(px(1.0))
-        .h(px(bar_h))
-        .items_end()
-        .children(traffic.upload.iter().enumerate().map(|(i, &up)| {
+    div().flex().gap(px(1.0)).h(px(bar_h)).items_end().children(
+        traffic.upload.iter().enumerate().map(|(i, &up)| {
             let down = traffic.download.get(i).copied().unwrap_or(0.0);
             let up_h = (up / max * bar_h as f64).max(1.0) as f32;
             let down_h = (down / max * bar_h as f64).max(1.0) as f32;
@@ -83,7 +83,8 @@ fn traffic_bars(traffic: &TrafficHistory, c: Colors) -> impl IntoElement {
                 .w(px(4.0))
                 .child(div().h(px(up_h)).bg(c.accent))
                 .child(div().h(px(down_h)).bg(c.success))
-        }))
+        }),
+    )
 }
 
 pub fn format_speed(bytes_per_sec: f64) -> String {

@@ -32,7 +32,7 @@ impl Theme {
         Self { colors, mode }
     }
 
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse_theme(s: &str) -> Self {
         match s {
             "dark" => Self::from_mode(ThemeMode::Dark),
             _ => Self::from_mode(ThemeMode::Light),
@@ -44,7 +44,7 @@ pub fn init_theme(cx: &mut gpui::App, mode: &str) {
     let theme = if mode.is_empty() {
         Theme::detect()
     } else {
-        Theme::from_str(mode)
+        Theme::parse_theme(mode)
     };
     cx.set_global(theme);
 }

@@ -1,4 +1,4 @@
-use gpui::{Hsla, rgba, rgb};
+use gpui::{Hsla, rgb, rgba};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Colors {

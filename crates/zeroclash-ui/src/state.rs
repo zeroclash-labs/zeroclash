@@ -1,6 +1,4 @@
-use gpui::{
-    Context, CursorStyle, MouseButton, Render, Window, div, prelude::*, px, white,
-};
+use gpui::{Context, CursorStyle, MouseButton, Render, Window, div, prelude::*, px, white};
 use zeroclash_core::MihomoClient;
 use zeroclash_core::mihomo::ProxyGroup;
 use zeroclash_core::profile::ProfilePreview;
@@ -60,7 +58,11 @@ pub struct AppState {
 impl AppState {
     pub fn new(tray: Option<TrayManager>, hotkey: HotkeyManager) -> Self {
         let mut lv = LogViewer::default();
-        lv.store.push(crate::components::log_viewer::LogLevel::Info, "zeroclash", "Application started");
+        lv.store.push(
+            crate::components::log_viewer::LogLevel::Info,
+            "zeroclash",
+            "Application started",
+        );
         Self {
             current_page: Page::Home,
             core_running: false,
@@ -90,17 +92,17 @@ impl AppState {
             match cmd {
                 UiCommand::Navigate(page) => self.current_page = page,
                 UiCommand::RefreshProxies => {
-                    if let Some(ref c) = self.client {
-                        if let Ok(v) = pollster::block_on(c.proxies()) {
-                            self.proxy_groups = util::parse_proxy_groups(&v);
-                        }
+                    if let Some(ref c) = self.client
+                        && let Ok(v) = pollster::block_on(c.proxies())
+                    {
+                        self.proxy_groups = util::parse_proxy_groups(&v);
                     }
                 }
                 UiCommand::RefreshConnections => {
-                    if let Some(ref c) = self.client {
-                        if let Ok(v) = pollster::block_on(c.connections()) {
-                            self.connections = util::parse_connections(&v);
-                        }
+                    if let Some(ref c) = self.client
+                        && let Ok(v) = pollster::block_on(c.connections())
+                    {
+                        self.connections = util::parse_connections(&v);
                     }
                 }
                 UiCommand::ToggleSystemProxy => {
@@ -117,19 +119,35 @@ impl AppState {
                     log::info!("ToggleAutoStart");
                 }
                 UiCommand::ImportProfile(url) => {
-                    self.log_viewer.store.push(crate::components::log_viewer::LogLevel::Info, "profile", &format!("Importing {url}"));
+                    self.log_viewer.store.push(
+                        crate::components::log_viewer::LogLevel::Info,
+                        "profile",
+                        &format!("Importing {url}"),
+                    );
                 }
                 UiCommand::ActivateProfile(uid) => {
-                    self.log_viewer.store.push(crate::components::log_viewer::LogLevel::Info, "profile", &format!("Activated {uid}"));
+                    self.log_viewer.store.push(
+                        crate::components::log_viewer::LogLevel::Info,
+                        "profile",
+                        &format!("Activated {uid}"),
+                    );
                 }
                 UiCommand::DeleteProfile(uid) => {
-                    self.log_viewer.store.push(crate::components::log_viewer::LogLevel::Info, "profile", &format!("Deleted {uid}"));
+                    self.log_viewer.store.push(
+                        crate::components::log_viewer::LogLevel::Info,
+                        "profile",
+                        &format!("Deleted {uid}"),
+                    );
                 }
                 UiCommand::CloseConnection(id) => {
                     if let Some(ref c) = self.client {
                         let _ = pollster::block_on(c.close_connection(&id));
                     }
-                    self.log_viewer.store.push(crate::components::log_viewer::LogLevel::Info, "conn", &format!("Closed {id}"));
+                    self.log_viewer.store.push(
+                        crate::components::log_viewer::LogLevel::Info,
+                        "conn",
+                        &format!("Closed {id}"),
+                    );
                     if self.selected_conn_id.as_deref() == Some(&id) {
                         self.selected_conn_id = None;
                     }
@@ -138,13 +156,21 @@ impl AppState {
                     self.core_running = !self.core_running;
                     if self.core_running {
                         self.client = Some(MihomoClient::default_addr());
-                        self.log_viewer.store.push(crate::components::log_viewer::LogLevel::Info, "core", "Core started");
+                        self.log_viewer.store.push(
+                            crate::components::log_viewer::LogLevel::Info,
+                            "core",
+                            "Core started",
+                        );
                         notify("ZeroClash", "Core started");
                     } else {
                         self.client = None;
                         self.proxy_groups.clear();
                         self.connections.clear();
-                        self.log_viewer.store.push(crate::components::log_viewer::LogLevel::Info, "core", "Core stopped");
+                        self.log_viewer.store.push(
+                            crate::components::log_viewer::LogLevel::Info,
+                            "core",
+                            "Core stopped",
+                        );
                         notify("ZeroClash", "Core stopped");
                     }
                 }
@@ -153,10 +179,10 @@ impl AppState {
     }
 
     fn poll_events(&mut self) {
-        if let Some(ref tray) = self.tray {
-            if tray.poll().is_some() {
-                log::info!("Tray event received");
-            }
+        if let Some(ref tray) = self.tray
+            && tray.poll().is_some()
+        {
+            log::info!("Tray event received");
         }
         if self.hotkey.poll().is_some() {
             self.push_command(UiCommand::ToggleSystemProxy);
@@ -165,7 +191,7 @@ impl AppState {
 
     fn tick(&mut self) {
         self.frame_count = self.frame_count.wrapping_add(1);
-        if self.core_running && self.frame_count % 30 == 0 {
+        if self.core_running && self.frame_count.is_multiple_of(30) {
             self.push_command(UiCommand::RefreshProxies);
             self.push_command(UiCommand::RefreshConnections);
         }
@@ -193,7 +219,15 @@ impl Render for AppState {
             .flex()
             .bg(c.bg)
             .text_color(c.text_primary)
-            .child(render_sidebar(cr, &cp, c, status_color, status_text, dot, cx))
+            .child(render_sidebar(
+                cr,
+                &cp,
+                c,
+                status_color,
+                status_text,
+                dot,
+                cx,
+            ))
             .child(render_content(cp, self, window, cx))
     }
 }
@@ -243,31 +277,61 @@ fn render_sidebar(
         .px(px(SPACE_LG))
         .py(px(SPACE_LG))
         .child(
-            div().flex().flex_col()
+            div()
+                .flex()
+                .flex_col()
                 .child(div().text_color(white()).child("ZeroClash"))
-                .child(div().mt(px(SPACE_XS)).text_color(status_color).child(format!("{dot} {status_text}"))),
+                .child(
+                    div()
+                        .mt(px(SPACE_XS))
+                        .text_color(status_color)
+                        .child(format!("{dot} {status_text}")),
+                ),
         )
-        .child(div().mt(px(SPACE_LG)).text_color(c.sidebar_text_muted).child("NAVIGATION"))
         .child(
-            div().mt(px(SPACE_SM)).flex().flex_col().children(
-                nav_pages.into_iter().map(|(label, page)| {
+            div()
+                .mt(px(SPACE_LG))
+                .text_color(c.sidebar_text_muted)
+                .child("NAVIGATION"),
+        )
+        .child(
+            div()
+                .mt(px(SPACE_SM))
+                .flex()
+                .flex_col()
+                .children(nav_pages.into_iter().map(|(label, page)| {
                     let active = cp == page;
                     let text = if active { c.accent } else { c.sidebar_text };
-                    let bg = if active { c.sidebar_active_bg } else { gpui::transparent_black() };
-                    let p = page.clone();
+                    let bg = if active {
+                        c.sidebar_active_bg
+                    } else {
+                        gpui::transparent_black()
+                    };
+                    let p = page;
                     div()
-                        .flex().items_center().h(px(32.0)).px(px(SPACE_MD))
-                        .rounded(px(design::RADIUS_SM)).bg(bg).text_color(text)
-                        .cursor(CursorStyle::PointingHand).child(label)
-                        .on_mouse_up(MouseButton::Left, cx.listener(move |this, _e, _w, cx| {
-                            this.current_page = p.clone();
-                            cx.notify();
-                        }))
-                }),
-            ),
+                        .flex()
+                        .items_center()
+                        .h(px(32.0))
+                        .px(px(SPACE_MD))
+                        .rounded(px(design::RADIUS_SM))
+                        .bg(bg)
+                        .text_color(text)
+                        .cursor(CursorStyle::PointingHand)
+                        .child(label)
+                        .on_mouse_up(
+                            MouseButton::Left,
+                            cx.listener(move |this, _e, _w, cx| {
+                                this.current_page = p.clone();
+                                cx.notify();
+                            }),
+                        )
+                })),
         )
         .child(
-            div().flex_1().flex().flex_col().justify_end()
-                .child(div().text_color(c.sidebar_text_muted).child(format!("v{}", env!("CARGO_PKG_VERSION")))),
+            div().flex_1().flex().flex_col().justify_end().child(
+                div()
+                    .text_color(c.sidebar_text_muted)
+                    .child(format!("v{}", env!("CARGO_PKG_VERSION"))),
+            ),
         )
 }

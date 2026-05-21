@@ -1,4 +1,6 @@
-use gpui::{App, AppContext, Bounds, WindowBounds, WindowOptions, px, size};
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+
+use gpui::{App, AppContext as _, Bounds, WindowBounds, WindowOptions, px, size};
 
 use crate::hotkey::HotkeyManager;
 use crate::state::AppState;

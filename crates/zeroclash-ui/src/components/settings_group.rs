@@ -11,7 +11,11 @@ pub fn toggle_row(c: Colors, label: &str, enabled: bool) -> gpui::Div {
         .justify_between()
         .items_center()
         .py(px(SPACE_XS))
-        .child(div().text_color(c.text_secondary).child(SharedString::from(label)))
+        .child(
+            div()
+                .text_color(c.text_secondary)
+                .child(SharedString::from(label)),
+        )
         .child(
             div()
                 .w(px(40.0))
@@ -40,15 +44,12 @@ pub fn settings_section(c: Colors, title: &str) -> gpui::Div {
         .p(px(SPACE_LG))
         .mb(px(SPACE_SM))
         .child(
-            div()
-                .flex()
-                .flex_col()
-                .child(
-                    div()
-                        .text_color(c.accent)
-                        .mb(px(SPACE_SM))
-                        .child(SharedString::from(title)),
-                ),
+            div().flex().flex_col().child(
+                div()
+                    .text_color(c.accent)
+                    .mb(px(SPACE_SM))
+                    .child(SharedString::from(title)),
+            ),
         )
 }
 
@@ -57,6 +58,14 @@ pub fn info_row(c: Colors, label: &str, value: &str) -> gpui::Div {
         .flex()
         .justify_between()
         .py(px(SPACE_XS))
-        .child(div().text_color(c.text_muted).child(SharedString::from(label)))
-        .child(div().text_color(c.text_secondary).child(SharedString::from(value)))
+        .child(
+            div()
+                .text_color(c.text_muted)
+                .child(SharedString::from(label)),
+        )
+        .child(
+            div()
+                .text_color(c.text_secondary)
+                .child(SharedString::from(value)),
+        )
 }

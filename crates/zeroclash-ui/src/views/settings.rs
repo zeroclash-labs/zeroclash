@@ -18,36 +18,46 @@ pub fn settings_page(
         .size_full()
         .p(px(SPACE_XL))
         .child(page_heading(c, "Settings"))
-        .child(settings_section(c, "Appearance").child(
-            div()
-                .flex()
-                .flex_col()
-                .child(info_row(c, "Theme", &state.theme_mode()))
-                .child(info_row(c, "Language", "English")),
-        ))
-        .child(settings_section(c, "System").child(
-            div()
-                .flex()
-                .flex_col()
-                .child(
-                    div()
-                        .cursor(CursorStyle::PointingHand)
-                        .on_mouse_up(MouseButton::Left, cx.listener(move |this, _e, _w, cx| {
-                            this.push_command(UiCommand::ToggleSystemProxy);
-                            cx.notify();
-                        }))
-                        .child(toggle_row(c, "System Proxy", state.enable_system_proxy)),
-                )
-                .child(
-                    div()
-                        .cursor(CursorStyle::PointingHand)
-                        .on_mouse_up(MouseButton::Left, cx.listener(move |this, _e, _w, cx| {
-                            this.push_command(UiCommand::ToggleAutoStart);
-                            cx.notify();
-                        }))
-                        .child(toggle_row(c, "Auto Start", false)),
-                ),
-        ))
+        .child(
+            settings_section(c, "Appearance").child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .child(info_row(c, "Theme", &state.theme_mode()))
+                    .child(info_row(c, "Language", "English")),
+            ),
+        )
+        .child(
+            settings_section(c, "System").child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .child(
+                        div()
+                            .cursor(CursorStyle::PointingHand)
+                            .on_mouse_up(
+                                MouseButton::Left,
+                                cx.listener(move |this, _e, _w, cx| {
+                                    this.push_command(UiCommand::ToggleSystemProxy);
+                                    cx.notify();
+                                }),
+                            )
+                            .child(toggle_row(c, "System Proxy", state.enable_system_proxy)),
+                    )
+                    .child(
+                        div()
+                            .cursor(CursorStyle::PointingHand)
+                            .on_mouse_up(
+                                MouseButton::Left,
+                                cx.listener(move |this, _e, _w, cx| {
+                                    this.push_command(UiCommand::ToggleAutoStart);
+                                    cx.notify();
+                                }),
+                            )
+                            .child(toggle_row(c, "Auto Start", false)),
+                    ),
+            ),
+        )
         .child(
             div()
                 .mt(px(SPACE_LG))

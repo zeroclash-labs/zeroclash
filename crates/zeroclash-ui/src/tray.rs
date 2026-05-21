@@ -1,6 +1,6 @@
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver};
-use std::sync::Arc;
 
 use tray_icon::menu::{Menu, MenuEvent, MenuItem};
 use tray_icon::{TrayIcon, TrayIconBuilder, TrayIconEvent};
@@ -34,21 +34,23 @@ impl TrayManager {
         menu.append(&quit_item)?;
 
         let tray = TrayIconBuilder::new()
-            .with_menu(Box::new(menu.clone()))
+            .with_menu(Box::new(menu))
             .with_tooltip("ZeroClash")
             .with_icon(icon)
             .build()?;
 
         let (tx, rx) = mpsc::channel();
 
-        std::thread::spawn(move || loop {
-            if MenuEvent::receiver().try_recv().is_ok() {
-                let _ = tx.send(TrayEvent::ShowWindow);
+        std::thread::spawn(move || {
+            loop {
+                if MenuEvent::receiver().try_recv().is_ok() {
+                    let _ = tx.send(TrayEvent::ShowWindow);
+                }
+                if TrayIconEvent::receiver().try_recv().is_ok() {
+                    let _ = tx.send(TrayEvent::ShowWindow);
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
             }
-            if TrayIconEvent::receiver().try_recv().is_ok() {
-                let _ = tx.send(TrayEvent::ShowWindow);
-            }
-            std::thread::sleep(std::time::Duration::from_millis(200));
         });
 
         Ok(Self {
