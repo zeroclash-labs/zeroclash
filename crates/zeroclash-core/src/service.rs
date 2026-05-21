@@ -109,7 +109,7 @@ impl ServiceManager {
     #[cfg(target_os = "linux")]
     fn install_systemd(&self) -> Result<()> {
         let unit = format!(
-            r#"[Unit]
+            r"[Unit]
 Description=ZeroClash Core Service
 After=network.target
 
@@ -121,7 +121,7 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-"#,
+",
             core = self.core_path.display()
         );
 
@@ -139,6 +139,7 @@ WantedBy=multi-user.target
         Ok(())
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     #[cfg(target_os = "linux")]
     fn uninstall_systemd(&self) -> Result<()> {
         let _ = std::process::Command::new("systemctl")

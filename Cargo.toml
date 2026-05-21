@@ -11,6 +11,7 @@ members = [
     "crates/zeroclash-sysinfo",
     "crates/zeroclash-core",
     "crates/zeroclash-gui",
+    "crates/zeroclash-ui",
 ]
 
 default-members = [
@@ -35,7 +36,10 @@ zeroclash-signal = { path = "crates/zeroclash-signal" }
 zeroclash-sysinfo = { path = "crates/zeroclash-sysinfo" }
 zeroclash-core = { path = "crates/zeroclash-core" }
 zeroclash-gui = { path = "crates/zeroclash-gui" }
+zeroclash-ui = { path = "crates/zeroclash-ui" }
 zeroclash-i18n = { path = "crates/zeroclash-i18n" }
+gpui = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.5" }
+gpui_platform = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.5" }
 
 parking_lot = { version = "0.12", features = ["hardware-lock-elision"] }
 anyhow = "1.0"
