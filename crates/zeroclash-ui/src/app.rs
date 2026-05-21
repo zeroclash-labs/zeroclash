@@ -7,6 +7,12 @@ use crate::tray::TrayManager;
 
 /// Launch the ZeroClash application.
 pub fn run() {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("tokio runtime");
+    let _guard = rt.enter();
+
     let tray = TrayManager::new().ok();
     let hotkey = HotkeyManager::new();
 
