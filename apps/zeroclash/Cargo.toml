@@ -10,7 +10,7 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-zeroclash-gui = { workspace = true }
+zeroclash-ui = { workspace = true }
 
 [lints]
 workspace = true
