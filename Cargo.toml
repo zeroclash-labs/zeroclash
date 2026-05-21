@@ -10,7 +10,6 @@ members = [
     "crates/zeroclash-signal",
     "crates/zeroclash-sysinfo",
     "crates/zeroclash-core",
-    "crates/zeroclash-gui",
     "crates/zeroclash-ui",
 ]
 
@@ -35,7 +34,6 @@ zeroclash-logging = { path = "crates/zeroclash-logging" }
 zeroclash-signal = { path = "crates/zeroclash-signal" }
 zeroclash-sysinfo = { path = "crates/zeroclash-sysinfo" }
 zeroclash-core = { path = "crates/zeroclash-core" }
-zeroclash-gui = { path = "crates/zeroclash-gui" }
 zeroclash-ui = { path = "crates/zeroclash-ui" }
 zeroclash-i18n = { path = "crates/zeroclash-i18n" }
 gpui = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.5" }
