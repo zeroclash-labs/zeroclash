@@ -23,8 +23,16 @@ pub fn settings_page(
                 div()
                     .flex()
                     .flex_col()
-                    .child(info_row(c, "Theme", &state.theme_mode()))
-                    .child(info_row(c, "Language", "English")),
+                    .child(info_row(
+                        c,
+                        "Theme",
+                        &state.config.verge.latest_arc().theme_mode,
+                    ))
+                    .child(info_row(
+                        c,
+                        "Language",
+                        &state.config.verge.latest_arc().language,
+                    )),
             ),
         )
         .child(
@@ -54,7 +62,11 @@ pub fn settings_page(
                                     cx.notify();
                                 }),
                             )
-                            .child(toggle_row(c, "Auto Start", false)),
+                            .child(toggle_row(
+                                c,
+                                "Auto Start",
+                                state.config.verge.latest_arc().enable_auto_start,
+                            )),
                     ),
             ),
         )
@@ -69,10 +81,4 @@ pub fn settings_page(
                 .cursor(CursorStyle::PointingHand)
                 .child(SharedString::from("Save Settings")),
         )
-}
-
-impl AppState {
-    fn theme_mode(&self) -> String {
-        "System".into()
-    }
 }

@@ -41,7 +41,7 @@ pub fn profiles_page(
             ),
         )
         .child(match state.import_dialog_visible {
-            true => import_dialog(c, cx).into_any_element(),
+            true => import_dialog(c, &state.import_url, cx).into_any_element(),
             false => div().into_any_element(),
         })
         .child(match state.profile_previews.is_empty() {
@@ -76,7 +76,7 @@ pub fn profiles_page(
         })
 }
 
-fn import_dialog(c: Colors, cx: &mut Context<AppState>) -> impl IntoElement {
+fn import_dialog(c: Colors, url: &str, cx: &mut Context<AppState>) -> impl IntoElement {
     card(c).child(
         div()
             .flex()
@@ -86,12 +86,53 @@ fn import_dialog(c: Colors, cx: &mut Context<AppState>) -> impl IntoElement {
                     .text_color(c.text_primary)
                     .child("Import Profile from URL"),
             )
-            .child(div().mt(px(SPACE_SM)).child("Enter subscription URL"))
+            .child(div().mt(px(SPACE_SM)).child("Subscription URL"))
+            .child(
+                div()
+                    .mt(px(SPACE_XS))
+                    .bg(c.input_bg)
+                    .border_1()
+                    .border_color(if url.is_empty() { c.border } else { c.accent })
+                    .rounded(px(RADIUS_SM))
+                    .px(px(SPACE_MD))
+                    .py(px(SPACE_XS))
+                    .text_color(if url.is_empty() {
+                        c.text_muted
+                    } else {
+                        c.text_primary
+                    })
+                    .child(if url.is_empty() {
+                        SharedString::from("Click Paste to fill from clipboard")
+                    } else {
+                        SharedString::from(url)
+                    }),
+            )
             .child(
                 div()
                     .mt(px(SPACE_SM))
                     .flex()
                     .gap(px(SPACE_SM))
+                    .child(
+                        div()
+                            .bg(c.surface_alt)
+                            .rounded(px(RADIUS_SM))
+                            .px(px(SPACE_MD))
+                            .py(px(SPACE_XS))
+                            .text_color(c.text_secondary)
+                            .cursor(CursorStyle::PointingHand)
+                            .child("Paste")
+                            .on_mouse_up(
+                                MouseButton::Left,
+                                cx.listener(move |this, _e, _w, cx| {
+                                    if let Ok(mut clipboard) = arboard::Clipboard::new()
+                                        && let Ok(text) = clipboard.get_text()
+                                    {
+                                        this.import_url = text;
+                                        cx.notify();
+                                    }
+                                }),
+                            ),
+                    )
                     .child(
                         div()
                             .bg(c.success_dim)

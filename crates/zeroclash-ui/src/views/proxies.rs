@@ -1,8 +1,8 @@
-use gpui::{Context, SharedString, Window, div, prelude::*, px};
+use gpui::{Context, CursorStyle, MouseButton, SharedString, Window, div, prelude::*, px};
 
 use crate::components::card::page_heading;
 use crate::design::{Colors, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS};
-use crate::state::AppState;
+use crate::state::{AppState, UiCommand};
 use crate::theme::Theme;
 
 pub fn proxies_page(
@@ -19,16 +19,21 @@ pub fn proxies_page(
         .flex()
         .flex_col()
         .child(page_heading(c, "Proxies"))
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(SPACE_SM))
-                .children(state.proxy_groups.iter().map(|g| proxy_card(c, g))),
-        )
+        .child({
+            let mut children: Vec<gpui::AnyElement> = Vec::new();
+            for g in &state.proxy_groups {
+                children.push(proxy_card(c, g, cx).into_any_element());
+            }
+            div().flex().flex_col().gap(px(SPACE_SM)).children(children)
+        })
 }
 
-fn proxy_card(c: Colors, g: &zeroclash_core::mihomo::ProxyGroup) -> impl IntoElement {
+fn proxy_card(
+    c: Colors,
+    g: &zeroclash_core::mihomo::ProxyGroup,
+    cx: &mut Context<AppState>,
+) -> impl IntoElement {
+    let is_selector = g.group_type == "selector" || g.group_type == "select";
     div()
         .bg(c.surface)
         .border_1()
@@ -65,12 +70,37 @@ fn proxy_card(c: Colors, g: &zeroclash_core::mihomo::ProxyGroup) -> impl IntoEle
                 .flex_wrap()
                 .gap(px(SPACE_XS))
                 .children(g.all.iter().take(8).map(|name| {
+                    let is_current = g.now.as_deref() == Some(name.as_str());
+                    let bg = if is_current {
+                        c.accent_dim
+                    } else {
+                        c.surface_alt
+                    };
+                    let fg = if is_current {
+                        c.accent
+                    } else {
+                        c.text_secondary
+                    };
+                    let group_name = g.name.clone();
+                    let proxy_name = name.clone();
                     div()
-                        .bg(c.surface_alt)
+                        .bg(bg)
                         .rounded(px(crate::design::RADIUS_SM))
                         .px(px(SPACE_SM))
                         .py(px(2.0))
-                        .text_color(c.text_secondary)
+                        .text_color(fg)
+                        .when(is_selector, |this| {
+                            this.cursor(CursorStyle::PointingHand).on_mouse_up(
+                                MouseButton::Left,
+                                cx.listener(move |this, _e, _w, cx| {
+                                    this.push_command(UiCommand::SelectProxy(
+                                        group_name.clone(),
+                                        proxy_name.clone(),
+                                    ));
+                                    cx.notify();
+                                }),
+                            )
+                        })
                         .child(SharedString::from(name.as_str()))
                 })),
         )

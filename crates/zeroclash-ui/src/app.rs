@@ -1,5 +1,7 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
+use std::path::PathBuf;
+
 use gpui::{App, AppContext as _, Bounds, WindowBounds, WindowOptions, px, size};
 
 use crate::hotkey::HotkeyManager;
@@ -15,19 +17,25 @@ pub fn run() {
         .expect("tokio runtime");
     let _guard = rt.enter();
 
+    let data_dir = dirs_next::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("zeroclash");
+    std::fs::create_dir_all(&data_dir).ok();
+
     let tray = TrayManager::new().ok();
     let hotkey = HotkeyManager::new();
 
-    gpui_platform::application().run(|cx: &mut App| {
+    gpui_platform::application().run(move |cx: &mut App| {
         init_theme(cx, "");
 
         let bounds = Bounds::centered(None, size(px(1280.0), px(840.0)), cx);
+        let dd = data_dir.clone();
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            |_window, cx| cx.new(|_cx| AppState::new(tray, hotkey)),
+            move |_window, cx| cx.new(|_cx| AppState::new(dd.clone(), tray, hotkey)),
         )
         .unwrap();
 
