@@ -11,6 +11,7 @@ license.workspace = true
 
 [dependencies]
 zeroclash-core = { workspace = true }
+zeroclash-i18n = { workspace = true }
 gpui = { workspace = true }
 gpui_platform = { workspace = true }
 anyhow = { workspace = true }

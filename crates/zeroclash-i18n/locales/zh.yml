@@ -65,3 +65,108 @@ tray:
     systemProxy: 系统代理
     tun: TUN
     profile: 订阅
+ui:
+  sidebar:
+    appName: ZeroClash
+    section: 导航
+    coreRunning: 内核运行中
+    coreStopped: 内核已停止
+  nav:
+    dashboard: 仪表板
+    proxies: 代理
+    profiles: 订阅
+    connections: 连接
+    logs: 日志
+    settings: 设置
+  pages:
+    dashboard:
+      coreStatus: 内核状态
+      trafficMonitor: 流量监控
+      outboundMode: 出站模式
+      tunMode: TUN 模式
+      system: 系统
+      running: 运行中
+      stopped: 已停止
+      active: 已启用
+      inactive: 未启用
+      startCore: 启动内核
+      stopCore: 停止内核
+      enableTun: 启用 TUN
+      disableTun: 关闭 TUN
+      version: 版本
+      systemProxy: 系统代理
+      systemProxyOn: 开
+      systemProxyOff: 关
+      mode:
+        rule: 规则
+        global: 全局
+        direct: 直连
+    proxies:
+      title: 代理
+      filterPlaceholder: 输入字符过滤分组 / 节点（Esc 清空）
+      test: 测试
+      nodesCount: '{count} 个节点'
+    profiles:
+      title: 订阅
+      importFromUrl: '+ 从 URL 导入'
+      noProfiles: 暂无订阅
+      noProfilesHint: 导入一个订阅 URL 开始使用
+      importTitle: 从 URL 导入订阅
+      subscriptionUrl: 订阅 URL
+      urlPlaceholder: 输入或粘贴订阅 URL
+      paste: 粘贴
+      import: 导入
+      cancel: 取消
+      activate: 激活
+      delete: 删除
+      confirmDelete: 确认删除
+      activeBadge: ● 当前
+      activeMarker: （当前）
+      updatedPrefix: '更新于 {age}'
+      typeRemote: 远程
+      typeLocal: 本地
+      typeMerge: 合并
+      typeScript: 脚本
+      typeOther: 其它
+      typeProfile: 订阅
+      errors:
+        emptyUrl: 请输入 URL 或从剪贴板粘贴
+        invalidScheme: 'URL 必须以 http:// 或 https:// 开头'
+    connections:
+      title: '活动连接（{count}）'
+      none: 暂无活动连接
+      headerHost: 主机
+      headerType: 类型
+      headerChain: 链路
+      headerRule: 规则
+      headerDlUl: 下载 / 上传
+      detailTitle: 连接详情
+      detailHost: '主机：'
+      detailNetwork: '网络：'
+      detailSource: '源：'
+      detailDest: '目标：'
+      detailRule: '规则：'
+    logs:
+      title: '日志（{count}）'
+      filters:
+        errors: 错误
+        warnings: 警告
+        info: 信息
+        all: 全部
+      auto: 自动
+      clear: 清空
+      noEntries: 没有匹配的日志
+      searchPlaceholder: 输入字符过滤 / Esc 清空
+    settings:
+      title: 设置
+      appearance: 外观
+      system: 系统
+      ports: 端口
+      theme: 主题
+      language: 语言
+      systemProxy: 系统代理
+      tunMode: TUN 模式
+      autoStart: 开机自启
+      http: HTTP
+      socks: SOCKS
+      mixed: 混合

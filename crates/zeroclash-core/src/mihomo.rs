@@ -98,6 +98,11 @@ pub enum CoreMode {
 // ── Mihomo REST client ─────────────────────────────────────────────────────
 
 /// Client for communicating with the mihomo core's REST API.
+///
+/// Cheap to `Clone` — internally wraps a `reqwest::Client` whose connection
+/// pool is shared between clones — so callers can spawn background tasks
+/// that own their own copy without round-trip through the UI thread.
+#[derive(Clone)]
 pub struct MihomoClient {
     pub base_url: String,
     client: reqwest::Client,

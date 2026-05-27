@@ -105,3 +105,11 @@ pub const FONT_MD: f32 = 14.0;
 pub const FONT_LG: f32 = 18.0;
 pub const FONT_XL: f32 = 24.0;
 pub const FONT_XXL: f32 = 32.0;
+
+// Font families. These names match the OpenType `name` table family values
+// of the bundled ttf files in `../assets/fonts/`. They are wired up by
+// [`crate::fonts::init_fonts`] at startup so referencing them from any
+// `.font_family(...)` call resolves the embedded glyphs instead of falling
+// back to the system UI font (which is unreliable on macOS 26).
+pub const FONT_SANS_FAMILY: &str = "Geist";
+pub const FONT_MONO_FAMILY: &str = "Geist Mono";
