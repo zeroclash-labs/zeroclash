@@ -2,16 +2,19 @@
 """Patch GPUI v1.3.7 for macOS 26 (Darwin 25) compatibility.
 
 The objc 0.2.7 crate cannot dynamically subclass NSApplication or NSResponder
-on macOS 26, so this patch:
-1. Uses base NSApplication and NSResponder classes (no custom subclasses)
-2. Uses objc_setAssociatedObject instead of custom ivars
-3. Calls on_finish_launching() directly since delegate callbacks won't fire
+on macOS 26. This applies 7 patches:
+1. objc_setAssociatedObject / objc_getAssociatedObject FFI declarations
+2. APP_CLASS = class!(NSApplication) — no subclass
+3. APP_DELEGATE_CLASS = class!(NSResponder) — no subclass
+4. NSNotificationCenter block-based finish_launching callback
+5. app.setActivationPolicy_ directly in run()
+6. objc_setAssociatedObject instead of set_ivar
+7. objc_getAssociatedObject instead of get_ivar
 
 Usage: python3 scripts/patch-gpui.py
 """
 
 import os
-import re
 import sys
 from pathlib import Path
 
@@ -36,8 +39,8 @@ if "objc_getAssociatedObject" in content:
 
 print(f"Patching {platform_rs} for macOS 26 compatibility...")
 
-# 1. Add associated object FFI declarations before MAC_PLATFORM_IVAR
-assoc_decls = """unsafe extern "C" {
+# 1. Add associated object FFI declarations
+assoc = '''unsafe extern "C" {
     #[link(name = "objc", kind = "dylib")]
     fn objc_setAssociatedObject(
         object: *mut std::ffi::c_void,
@@ -55,60 +58,77 @@ assoc_decls = """unsafe extern "C" {
 const OBJC_ASSOCIATION_RETAIN: std::ffi::c_ulong = 0x301;
 static PLATFORM_ASSOC_KEY: u8 = 0;
 
-"""
-old = 'const MAC_PLATFORM_IVAR: &str = "platform";'
-content = content.replace(old, assoc_decls + old)
+'''
+content = content.replace(
+    'const MAC_PLATFORM_IVAR: &str = "platform";', assoc + 'const MAC_PLATFORM_IVAR: &str = "platform";'
+)
 
-# 2. Replace build_classes() — use base classes, no subclassing
-old = '''APP_CLASS = {
+# 2. Replace APP_CLASS subclass with base NSApplication
+content = content.replace(
+    '''APP_CLASS = {
             let mut decl = ClassDecl::new("GPUIApplication", class!(NSApplication)).unwrap();
             decl.add_ivar::<*mut c_void>(MAC_PLATFORM_IVAR);
             decl.register()
-        }'''
-content = content.replace(old, "APP_CLASS = class!(NSApplication)")
-
-# 3. Replace entire delegate class registration with base NSResponder
-#    (the delegate block starts with "APP_DELEGATE_CLASS = {" and ends with "decl.register()" plus "}" and another "}")
-old = re.search(
-    r'APP_DELEGATE_CLASS = \{[^}]*ClassDecl::new\("GPUIApplicationDelegate"[^}]*decl\.register\(\)\s*\}\s*\}',
-    content, re.DOTALL
+        }''',
+    'APP_CLASS = class!(NSApplication);',
 )
-if old:
-    content = content.replace(old.group(0), "APP_DELEGATE_CLASS = class!(NSResponder);\n    }")
-else:
-    print("Warning: could not find delegate class block — trying alternative approach")
-    # Fallback: find the whole delegate class block manually
-    start = content.find('APP_DELEGATE_CLASS = {')
-    if start >= 0:
-        depth = 0
-        end = start
-        for i, ch in enumerate(content[start:], start):
-            if ch == '{':
-                depth += 1
-            elif ch == '}':
-                depth -= 1
-                if depth == 0:
-                    end = i + 1
-                    # Check if this belongs to build_classes (need another })
-                    j = end
-                    while j < len(content) and content[j] in ' \t\n':
-                        j += 1
-                    if content[j] == '}':
-                        end = j + 1
-                    break
-        old_block = content[start:end]
-        content = content.replace(old_block, "APP_DELEGATE_CLASS = class!(NSResponder);\n    }")
 
-# 4. Call on_finish_launching() directly (delegate won't fire it)
-old = '''state.finish_launching = Some(on_finish_launching);
-            drop(state);'''
-new = '''// macOS 26: delegate callbacks won't fire, call directly
-            on_finish_launching();
-            drop(state);'''
-content = content.replace(old, new)
+# 3. Replace delegate class registration with base NSResponder
+start_marker = '        APP_DELEGATE_CLASS = unsafe {'
+idx = content.find(start_marker)
+if idx >= 0:
+    depth = 0
+    in_block = False
+    for i, ch in enumerate(content[idx:], idx):
+        if ch == '{':
+            depth += 1
+            in_block = True
+        elif ch == '}':
+            depth -= 1
+            if in_block and depth == 0:
+                j = i + 1
+                while j < len(content) and content[j] in ' \t\n\r':
+                    j += 1
+                end = j + 1 if (j < len(content) and content[j] == '}') else i + 1
+                content = content.replace(
+                    content[idx:end],
+                    '        APP_DELEGATE_CLASS = class!(NSResponder);\n    }',
+                )
+                break
 
-# 5. Replace set_ivar with objc_setAssociatedObject in run()
-old = '''(*app).set_ivar(MAC_PLATFORM_IVAR, self_ptr);
+# 4. NSNotificationCenter block-based callback
+content = content.replace(
+    '''state.finish_launching = Some(on_finish_launching);
+            drop(state);''',
+    '''// macOS 26: use NSNotificationCenter block instead of delegate
+            let cb = std::sync::Mutex::new(Some(on_finish_launching));
+            let block = block::ConcreteBlock::new(move || {
+                if let Some(cb) = cb.lock().unwrap().take() {
+                    cb();
+                }
+            });
+            let block = block.copy();
+            unsafe {
+                let nc: id = msg_send![class!(NSNotificationCenter), defaultCenter];
+                let name: id = msg_send![class!(NSString), stringWithUTF8String: "NSApplicationDidFinishLaunchingNotification\\0".as_ptr() as *const i8];
+                let _: id = msg_send![nc, addObserverForName:name object:nil queue:nil usingBlock:&*block];
+            }
+            drop(state);''',
+)
+
+# 5. Set activation policy
+content = content.replace(
+    '''let app: id = msg_send![APP_CLASS, sharedApplication];
+            let app_delegate: id = msg_send![APP_DELEGATE_CLASS, new];''',
+    '''let app: id = msg_send![APP_CLASS, sharedApplication];
+            // macOS 26: must set activation policy here since delegate won't
+            app.setActivationPolicy_(NSApplicationActivationPolicyRegular);
+            let app_delegate: id = msg_send![APP_DELEGATE_CLASS, new];''',
+)
+
+# 6. Replace set_ivar with objc_setAssociatedObject
+content = content.replace(
+    '''(*app).set_ivar(MAC_PLATFORM_IVAR, self_ptr);
             (*app_delegate).set_ivar(MAC_PLATFORM_IVAR, self_ptr);
 
             let pool = NSAutoreleasePool::new(nil);
@@ -116,9 +136,8 @@ old = '''(*app).set_ivar(MAC_PLATFORM_IVAR, self_ptr);
             pool.drain();
 
             (*app).set_ivar(MAC_PLATFORM_IVAR, null_mut::<c_void>());
-            (*NSWindow::delegate(app)).set_ivar(MAC_PLATFORM_IVAR, null_mut::<c_void>());'''
-
-new = '''let key = (&PLATFORM_ASSOC_KEY) as *const u8 as *const _;
+            (*NSWindow::delegate(app)).set_ivar(MAC_PLATFORM_IVAR, null_mut::<c_void>());''',
+    '''let key = (&PLATFORM_ASSOC_KEY) as *const u8 as *const _;
             objc_setAssociatedObject(app as *mut _, key, self_ptr as *mut _, OBJC_ASSOCIATION_RETAIN);
             objc_setAssociatedObject(app_delegate as *mut _, key, self_ptr as *mut _, OBJC_ASSOCIATION_RETAIN);
 
@@ -127,17 +146,17 @@ new = '''let key = (&PLATFORM_ASSOC_KEY) as *const u8 as *const _;
             pool.drain();
 
             objc_setAssociatedObject(app as *mut _, key, null_mut::<c_void>() as *mut _, OBJC_ASSOCIATION_RETAIN);
-            objc_setAssociatedObject(NSWindow::delegate(app) as *mut _, key, null_mut::<c_void>() as *mut _, OBJC_ASSOCIATION_RETAIN);'''
+            objc_setAssociatedObject(NSWindow::delegate(app) as *mut _, key, null_mut::<c_void>() as *mut _, OBJC_ASSOCIATION_RETAIN);''',
+)
 
-content = content.replace(old, new)
-
-# 6. Replace get_ivar with objc_getAssociatedObject in get_mac_platform
-old = "let platform_ptr: *mut c_void = *object.get_ivar(MAC_PLATFORM_IVAR);"
-new = '''let platform_ptr: *mut c_void = objc_getAssociatedObject(
+# 7. Replace get_ivar with objc_getAssociatedObject
+content = content.replace(
+    'let platform_ptr: *mut c_void = *object.get_ivar(MAC_PLATFORM_IVAR);',
+    '''let platform_ptr: *mut c_void = objc_getAssociatedObject(
             object as *mut Object as *mut _,
             (&PLATFORM_ASSOC_KEY) as *const u8 as *const _,
-        );'''
-content = content.replace(old, new)
+        );''',
+)
 
 platform_rs.write_text(content)
-print("GPUI patch applied successfully.")
+print("GPUI patch applied successfully (7 fixes).")
