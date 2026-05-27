@@ -55,7 +55,7 @@ assoc = '''unsafe extern "C" {
     ) -> *mut std::ffi::c_void;
 }
 
-const OBJC_ASSOCIATION_RETAIN: std::ffi::c_ulong = 0x301;
+const OBJC_ASSOCIATION_ASSIGN: std::ffi::c_ulong = 0x301;
 static PLATFORM_ASSOC_KEY: u8 = 0;
 
 '''
@@ -138,15 +138,15 @@ content = content.replace(
             (*app).set_ivar(MAC_PLATFORM_IVAR, null_mut::<c_void>());
             (*NSWindow::delegate(app)).set_ivar(MAC_PLATFORM_IVAR, null_mut::<c_void>());''',
     '''let key = (&PLATFORM_ASSOC_KEY) as *const u8 as *const _;
-            objc_setAssociatedObject(app as *mut _, key, self_ptr as *mut _, OBJC_ASSOCIATION_RETAIN);
-            objc_setAssociatedObject(app_delegate as *mut _, key, self_ptr as *mut _, OBJC_ASSOCIATION_RETAIN);
+            objc_setAssociatedObject(app as *mut _, key, self_ptr as *mut _, OBJC_ASSOCIATION_ASSIGN);
+            objc_setAssociatedObject(app_delegate as *mut _, key, self_ptr as *mut _, OBJC_ASSOCIATION_ASSIGN);
 
             let pool = NSAutoreleasePool::new(nil);
             app.run();
             pool.drain();
 
-            objc_setAssociatedObject(app as *mut _, key, null_mut::<c_void>() as *mut _, OBJC_ASSOCIATION_RETAIN);
-            objc_setAssociatedObject(NSWindow::delegate(app) as *mut _, key, null_mut::<c_void>() as *mut _, OBJC_ASSOCIATION_RETAIN);''',
+            objc_setAssociatedObject(app as *mut _, key, null_mut::<c_void>() as *mut _, OBJC_ASSOCIATION_ASSIGN);
+            objc_setAssociatedObject(NSWindow::delegate(app) as *mut _, key, null_mut::<c_void>() as *mut _, OBJC_ASSOCIATION_ASSIGN);''',
 )
 
 # 7. Replace get_ivar with objc_getAssociatedObject
