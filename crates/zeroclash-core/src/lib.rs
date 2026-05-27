@@ -4,6 +4,8 @@ pub mod connection;
 pub mod constants;
 pub mod enhance;
 pub mod i18n;
+#[cfg(target_os = "macos")]
+mod macos_proxy;
 pub mod media_unlock;
 pub mod mihomo;
 pub mod profile;

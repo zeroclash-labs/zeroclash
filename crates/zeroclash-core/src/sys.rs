@@ -94,7 +94,7 @@ pub fn release_singleton(app_name: &str) {
     let _ = std::fs::remove_file(lock_path);
 }
 
-// ── System proxy (macOS only via sysproxy-rs) ──────────────────────────────
+// ── System proxy ────────────────────────────────────────────────────────────
 
 /// Platform-specific system proxy operations.
 pub struct SystemProxy;
@@ -103,15 +103,7 @@ impl SystemProxy {
     /// Enable system HTTP/HTTPS/SOCKS proxy pointing to localhost:port.
     pub fn enable(http_port: u16, _socks_port: u16) -> Result<()> {
         #[cfg(target_os = "macos")]
-        {
-            let proxy = sysproxy::Sysproxy {
-                enable: true,
-                host: "127.0.0.1".into(),
-                port: http_port,
-                bypass: "localhost,127.0.0.1,::1".into(),
-            };
-            proxy.set_system_proxy()?;
-        }
+        crate::macos_proxy::enable("127.0.0.1", http_port, "localhost,127.0.0.1,::1")?;
         #[cfg(not(target_os = "macos"))]
         {
             let _ = (http_port, _socks_port);
@@ -123,17 +115,9 @@ impl SystemProxy {
     /// Disable system proxy.
     pub fn disable() -> Result<()> {
         #[cfg(target_os = "macos")]
-        {
-            let proxy = sysproxy::Sysproxy {
-                enable: false,
-                ..Default::default()
-            };
-            proxy.set_system_proxy()?;
-        }
+        crate::macos_proxy::disable()?;
         #[cfg(not(target_os = "macos"))]
-        {
-            log::warn!("System proxy is only supported on macOS");
-        }
+        log::warn!("System proxy is only supported on macOS");
         Ok(())
     }
 }
