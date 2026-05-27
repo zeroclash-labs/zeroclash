@@ -124,7 +124,7 @@ impl AppState {
         }
     }
 
-    fn save_config(&self) {
+    pub fn save_config(&self) {
         let path = self.data_dir.join("clash-verge.yaml");
         let verge = self.config.verge.latest_arc();
         match serde_yaml_ng::to_string(&*verge) {
