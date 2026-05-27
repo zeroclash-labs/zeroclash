@@ -2,19 +2,30 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{self, Receiver};
 
-use tray_icon::menu::{Menu, MenuEvent, MenuItem};
+use tray_icon::menu::{Menu, MenuEvent, MenuItem, MenuItemBuilder};
 use tray_icon::{TrayIcon, TrayIconBuilder, TrayIconEvent};
 
 #[derive(Debug, Clone)]
 pub enum TrayEvent {
     ShowWindow,
     Quit,
+    SwitchMode(String),
+    ToggleProxy,
+    ToggleTun,
 }
 
 pub struct TrayManager {
     pub visible: Arc<AtomicBool>,
     event_rx: Receiver<TrayEvent>,
     _tray: TrayIcon,
+}
+
+fn menu_item(text: &str, id: &str) -> MenuItem {
+    MenuItemBuilder::new()
+        .text(text)
+        .enabled(true)
+        .id(id.into())
+        .build()
 }
 
 impl TrayManager {
@@ -28,10 +39,15 @@ impl TrayManager {
         let icon = tray_icon::Icon::from_rgba(rgba, 32, 32)?;
 
         let menu = Menu::new();
-        let show_item = MenuItem::new("Show/Hide", true, None);
-        let quit_item = MenuItem::new("Quit", true, None);
-        menu.append(&show_item)?;
-        menu.append(&quit_item)?;
+        menu.append(&menu_item("Rule", "mode_rule"))?;
+        menu.append(&menu_item("Global", "mode_global"))?;
+        menu.append(&menu_item("Direct", "mode_direct"))?;
+        menu.append(&MenuItem::new("---", false, None))?;
+        menu.append(&menu_item("Toggle System Proxy", "proxy"))?;
+        menu.append(&menu_item("Toggle TUN", "tun"))?;
+        menu.append(&MenuItem::new("---", false, None))?;
+        menu.append(&menu_item("Show/Hide", "show"))?;
+        menu.append(&menu_item("Quit", "quit"))?;
 
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
@@ -43,8 +59,17 @@ impl TrayManager {
 
         std::thread::spawn(move || {
             loop {
-                if MenuEvent::receiver().try_recv().is_ok() {
-                    let _ = tx.send(TrayEvent::ShowWindow);
+                if let Ok(event) = MenuEvent::receiver().try_recv() {
+                    let evt = match event.id().as_ref() {
+                        "mode_rule" => TrayEvent::SwitchMode("rule".into()),
+                        "mode_global" => TrayEvent::SwitchMode("global".into()),
+                        "mode_direct" => TrayEvent::SwitchMode("direct".into()),
+                        "proxy" => TrayEvent::ToggleProxy,
+                        "tun" => TrayEvent::ToggleTun,
+                        "quit" => TrayEvent::Quit,
+                        _ => TrayEvent::ShowWindow,
+                    };
+                    let _ = tx.send(evt);
                 }
                 if TrayIconEvent::receiver().try_recv().is_ok() {
                     let _ = tx.send(TrayEvent::ShowWindow);

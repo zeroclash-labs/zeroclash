@@ -61,9 +61,41 @@ fn proxy_card(
         )
         .child(
             div()
-                .text_color(c.accent)
-                .child(SharedString::from(g.now.as_deref().unwrap_or("none"))),
+                .flex()
+                .justify_between()
+                .items_center()
+                .child(
+                    div()
+                        .text_color(c.accent)
+                        .child(SharedString::from(g.now.as_deref().unwrap_or("none"))),
+                )
+                .child({
+                    let group_name = g.name.clone();
+                    div()
+                        .bg(c.surface_alt)
+                        .rounded(px(crate::design::RADIUS_SM))
+                        .px(px(SPACE_SM))
+                        .py(px(2.0))
+                        .text_color(c.text_secondary)
+                        .cursor(CursorStyle::PointingHand)
+                        .child("Test")
+                        .on_mouse_up(
+                            MouseButton::Left,
+                            cx.listener(move |this, _e, _w, cx| {
+                                this.push_command(UiCommand::TestDelay(group_name.clone()));
+                                cx.notify();
+                            }),
+                        )
+                }),
         )
+        .when(!g.history.is_empty(), |this| {
+            let last = &g.history[g.history.len() - 1];
+            this.child(
+                div()
+                    .text_color(c.success)
+                    .child(SharedString::from(format!("{}ms", last.delay))),
+            )
+        })
         .child(
             div()
                 .flex()

@@ -40,6 +40,7 @@ pub enum UiCommand {
     SelectProxy(String, String),
     SwitchMode(String),
     ToggleTun,
+    TestDelay(String),
 }
 
 pub struct AppState {
@@ -354,6 +355,30 @@ impl AppState {
         );
     }
 
+    fn handle_test_delay(&mut self, name: String) {
+        let Some(ref c) = self.client else {
+            return;
+        };
+        match pollster::block_on(c.proxy_delay(&name, 5000, "https://www.gstatic.com/generate_204"))
+        {
+            Ok(delay) => {
+                self.log_viewer.store.push(
+                    crate::components::log_viewer::LogLevel::Info,
+                    "proxy",
+                    &format!("{name}: {delay}ms"),
+                );
+                self.push_command(UiCommand::RefreshProxies);
+            }
+            Err(e) => {
+                self.log_viewer.store.push(
+                    crate::components::log_viewer::LogLevel::Error,
+                    "proxy",
+                    &format!("Delay test {name} failed: {e}"),
+                );
+            }
+        }
+    }
+
     pub fn push_command(&mut self, cmd: UiCommand) {
         self.pending_commands.push(cmd);
     }
@@ -421,15 +446,32 @@ impl AppState {
                 UiCommand::ToggleCore => self.handle_toggle_core(),
                 UiCommand::SwitchMode(mode) => self.handle_switch_mode(mode),
                 UiCommand::ToggleTun => self.handle_toggle_tun(),
+                UiCommand::TestDelay(name) => self.handle_test_delay(name),
             }
         }
     }
 
     fn poll_events(&mut self) {
-        if let Some(ref tray) = self.tray
-            && tray.poll().is_some()
-        {
-            log::info!("Tray event received");
+        if let Some(ref tray) = self.tray {
+            match tray.poll() {
+                Some(crate::tray::TrayEvent::Quit) => {
+                    log::info!("Tray: quit");
+                    std::process::exit(0);
+                }
+                Some(crate::tray::TrayEvent::SwitchMode(mode)) => {
+                    self.push_command(UiCommand::SwitchMode(mode));
+                }
+                Some(crate::tray::TrayEvent::ToggleProxy) => {
+                    self.push_command(UiCommand::ToggleSystemProxy);
+                }
+                Some(crate::tray::TrayEvent::ToggleTun) => {
+                    self.push_command(UiCommand::ToggleTun);
+                }
+                Some(crate::tray::TrayEvent::ShowWindow) => {
+                    log::info!("Tray: show window");
+                }
+                None => {}
+            }
         }
         if self.hotkey.poll().is_some() {
             self.push_command(UiCommand::ToggleSystemProxy);
