@@ -17,6 +17,8 @@ pub fn settings_page(
 
     div()
         .size_full()
+        .id("settings-scroll")
+        .overflow_y_scroll()
         .p(px(SPACE_XL))
         .child(page_heading(c, "Settings"))
         .child(
@@ -119,6 +121,8 @@ fn clickable_info_row(
                     .edit_draft(|v| v.theme_mode = next.clone());
                 this.config.verge.apply();
                 this.save_config();
+                let theme = Theme::parse_theme(&next);
+                cx.set_global(theme);
                 cx.notify();
             }),
         )

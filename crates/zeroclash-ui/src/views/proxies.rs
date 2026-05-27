@@ -18,6 +18,8 @@ pub fn proxies_page(
         .p(px(SPACE_XL))
         .flex()
         .flex_col()
+        .id("proxies-scroll")
+        .overflow_y_scroll()
         .child(page_heading(c, "Proxies"))
         .child({
             let mut children: Vec<gpui::AnyElement> = Vec::new();

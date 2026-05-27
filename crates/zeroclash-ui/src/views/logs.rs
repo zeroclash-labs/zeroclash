@@ -36,6 +36,8 @@ pub fn logs_page(
         .p(px(SPACE_XL))
         .flex()
         .flex_col()
+        .id("logs-scroll")
+        .overflow_y_scroll()
         .child(page_heading(
             c,
             format!("Logs ({})", viewer.store.entries().len()),

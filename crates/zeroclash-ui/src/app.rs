@@ -2,12 +2,12 @@
 
 use std::path::PathBuf;
 
-use gpui::{App, AppContext as _, Bounds, WindowBounds, WindowOptions, px, size};
-
 use crate::hotkey::HotkeyManager;
 use crate::state::AppState;
 use crate::theme::init_theme;
 use crate::tray::TrayManager;
+use gpui::{prelude::*, px, size, App, Bounds, WindowBounds, WindowOptions};
+use gpui_platform::application;
 
 /// Launch the ZeroClash application.
 pub fn run() {
@@ -25,7 +25,7 @@ pub fn run() {
     let tray = TrayManager::new().ok();
     let hotkey = HotkeyManager::new();
 
-    gpui_platform::application().run(move |cx: &mut App| {
+    application().run(move |cx: &mut App| {
         init_theme(cx, "");
 
         let bounds = Bounds::centered(None, size(px(1280.0), px(840.0)), cx);

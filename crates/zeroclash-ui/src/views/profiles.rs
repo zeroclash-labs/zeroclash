@@ -19,6 +19,8 @@ pub fn profiles_page(
         .p(px(SPACE_XL))
         .flex()
         .flex_col()
+        .id("profiles-scroll")
+        .overflow_y_scroll()
         .child(page_heading(c, "Profiles"))
         .child(
             div().flex().mb(px(SPACE_MD)).child(

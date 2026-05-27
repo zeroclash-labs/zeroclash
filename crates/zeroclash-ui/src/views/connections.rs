@@ -19,6 +19,8 @@ pub fn connections_page(
         .p(px(SPACE_XL))
         .flex()
         .flex_col()
+        .id("connections-scroll")
+        .overflow_y_scroll()
         .child(
             div()
                 .text_color(c.text_primary)

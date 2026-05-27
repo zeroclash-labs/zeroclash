@@ -1,4 +1,4 @@
-use gpui::{Context, CursorStyle, MouseButton, SharedString, Window, div, prelude::*, px};
+use gpui::{div, prelude::*, px, Context, CursorStyle, MouseButton, SharedString, Window};
 
 use crate::components::card::{card, page_heading, section_title};
 use crate::components::traffic_graph::traffic_summary;
@@ -16,6 +16,8 @@ pub fn dashboard_page(
 
     div()
         .size_full()
+        .id("dashboard-scroll")
+        .overflow_y_scroll()
         .p(px(SPACE_XL))
         .child(page_heading(c, "Dashboard"))
         .child(
@@ -29,7 +31,7 @@ pub fn dashboard_page(
                         .child(core_status_card(c, state.core_running, cx)),
                 )
                 .child(
-                    div().w_full().child(
+                    div().flex_1().child(
                         card(c).child(
                             div()
                                 .flex()
