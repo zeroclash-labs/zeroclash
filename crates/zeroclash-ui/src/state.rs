@@ -38,6 +38,8 @@ pub enum UiCommand {
     DeleteProfile(String),
     CloseConnection(String),
     SelectProxy(String, String),
+    SwitchMode(String),
+    ToggleTun,
 }
 
 pub struct AppState {
@@ -306,6 +308,52 @@ impl AppState {
         }
     }
 
+    fn handle_switch_mode(&mut self, mode: String) {
+        let Some(ref c) = self.client else {
+            return;
+        };
+        let mode_str = mode.clone();
+        match pollster::block_on(c.switch_mode(&mode)) {
+            Ok(()) => {
+                self.log_viewer.store.push(
+                    crate::components::log_viewer::LogLevel::Info,
+                    "core",
+                    &format!("Switched mode to {mode_str}"),
+                );
+                notify("ZeroClash", &format!("Mode: {mode_str}"));
+            }
+            Err(e) => {
+                self.log_viewer.store.push(
+                    crate::components::log_viewer::LogLevel::Error,
+                    "core",
+                    &format!("Mode switch failed: {e}"),
+                );
+            }
+        }
+    }
+
+    fn handle_toggle_tun(&mut self) {
+        self.config
+            .verge
+            .edit_draft(|v| v.enable_tun = !v.enable_tun);
+        self.config.verge.apply();
+        self.save_config();
+        let enabled = self.config.verge.latest_arc().enable_tun;
+        self.log_viewer.store.push(
+            crate::components::log_viewer::LogLevel::Info,
+            "core",
+            &format!("TUN mode {}", if enabled { "enabled" } else { "disabled" }),
+        );
+        notify(
+            "ZeroClash",
+            if enabled {
+                "TUN mode enabled"
+            } else {
+                "TUN mode disabled"
+            },
+        );
+    }
+
     pub fn push_command(&mut self, cmd: UiCommand) {
         self.pending_commands.push(cmd);
     }
@@ -371,6 +419,8 @@ impl AppState {
                 }
                 UiCommand::SelectProxy(group, proxy) => self.handle_select_proxy(group, proxy),
                 UiCommand::ToggleCore => self.handle_toggle_core(),
+                UiCommand::SwitchMode(mode) => self.handle_switch_mode(mode),
+                UiCommand::ToggleTun => self.handle_toggle_tun(),
             }
         }
     }

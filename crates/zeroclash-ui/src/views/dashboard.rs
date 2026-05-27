@@ -44,6 +44,14 @@ pub fn dashboard_page(
             div()
                 .flex()
                 .gap(px(SPACE_MD))
+                .child(div().flex_1().child(mode_card(c, cx)))
+                .child(div().flex_1().child(tun_card(c, state, cx))),
+        )
+        .child(
+            div()
+                .flex()
+                .gap(px(SPACE_MD))
+                .mt(px(SPACE_MD))
                 .child(div().flex_1().child(system_info_card(c, state))),
         )
 }
@@ -136,6 +144,86 @@ fn system_info_card(c: Colors, state: &AppState) -> impl IntoElement {
                             "OFF"
                         },
                     )),
+            ),
+    )
+}
+
+fn mode_card(c: Colors, cx: &mut Context<AppState>) -> impl IntoElement {
+    let modes = ["rule", "global", "direct"];
+    card(c).child(
+        div()
+            .flex()
+            .flex_col()
+            .child(section_title(c, "OUTBOUND MODE"))
+            .child(
+                div()
+                    .mt(px(SPACE_SM))
+                    .flex()
+                    .gap(px(SPACE_SM))
+                    .children(modes.iter().map(|mode| {
+                        div()
+                            .bg(c.surface_alt)
+                            .rounded(px(RADIUS_SM))
+                            .px(px(SPACE_MD))
+                            .py(px(SPACE_XS))
+                            .text_color(c.text_secondary)
+                            .cursor(CursorStyle::PointingHand)
+                            .child(SharedString::from(*mode))
+                            .on_mouse_up(MouseButton::Left, {
+                                let m = mode.to_string();
+                                cx.listener(move |this, _e, _w, cx| {
+                                    this.push_command(UiCommand::SwitchMode(m.clone()));
+                                    cx.notify();
+                                })
+                            })
+                    })),
+            ),
+    )
+}
+
+fn tun_card(c: Colors, state: &AppState, cx: &mut Context<AppState>) -> impl IntoElement {
+    let enabled = state.config.verge.latest_arc().enable_tun;
+    let status_color = if enabled { c.success } else { c.text_muted };
+    let btn_text = if enabled { "Disable TUN" } else { "Enable TUN" };
+    let btn_color = if enabled { c.danger } else { c.success };
+    card(c).child(
+        div()
+            .flex()
+            .flex_col()
+            .child(section_title(c, "TUN MODE"))
+            .child(
+                div()
+                    .mt(px(SPACE_MD))
+                    .flex()
+                    .items_center()
+                    .gap(px(SPACE_SM))
+                    .child(
+                        div()
+                            .text_color(status_color)
+                            .child(SharedString::from(if enabled {
+                                "● Active"
+                            } else {
+                                "○ Inactive"
+                            })),
+                    ),
+            )
+            .child(
+                div()
+                    .mt(px(SPACE_MD))
+                    .bg(if enabled { c.danger_dim } else { c.success_dim })
+                    .rounded(px(RADIUS_SM))
+                    .px(px(SPACE_LG))
+                    .py(px(SPACE_SM))
+                    .text_color(btn_color)
+                    .cursor(CursorStyle::PointingHand)
+                    .child(SharedString::from(btn_text))
+                    .on_mouse_up(
+                        MouseButton::Left,
+                        cx.listener(move |this, _e, _w, cx| {
+                            this.push_command(UiCommand::ToggleTun);
+                            cx.notify();
+                        }),
+                    ),
             ),
     )
 }
