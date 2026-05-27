@@ -27,6 +27,8 @@ authors = ["Fynn Tang <fzpying@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/zeroclash-labs/zeroclash.git"
 license = "CC-BY-NC-SA-4.0 <https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode>"
+
+
 [workspace.dependencies]
 zeroclash-draft = { path = "crates/zeroclash-draft" }
 zeroclash-limiter = { path = "crates/zeroclash-limiter" }
@@ -36,12 +38,11 @@ zeroclash-sysinfo = { path = "crates/zeroclash-sysinfo" }
 zeroclash-core = { path = "crates/zeroclash-core" }
 zeroclash-ui = { path = "crates/zeroclash-ui" }
 zeroclash-i18n = { path = "crates/zeroclash-i18n" }
-gpui = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.5" }
-gpui_platform = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.5" }
+gpui = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.7" }
+gpui_platform = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.7" }
 
 parking_lot = { version = "0.12", features = ["hardware-lock-elision"] }
 anyhow = "1.0"
-tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "time", "sync", "signal", "process", "fs"] }
 flexi_logger = "0.31"
 log = "0.4"
 compact_str = { version = "0.9", features = ["serde"] }
@@ -49,7 +50,8 @@ serde = "1.0"
 serde_json = "1.0"
 serde_yaml_ng = "0.10"
 bitflags = "2.11"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
 
 # Windows-only
 deelevate = "0.2"
