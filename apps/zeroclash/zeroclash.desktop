@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ZeroClash
+Comment=A pure-Rust desktop GUI for the mihomo (Clash Meta) proxy core
+Exec=zeroclash
+Icon=zeroclash
+Categories=Network;Utility;
+Terminal=false

@@ -17,5 +17,21 @@ ureq = { version = "3", default-features = false, features = ["rustls"] }
 flate2 = "1"
 zip = "2"
 
+[package.metadata.deb]
+name = "zeroclash"
+maintainer = "Fynn Tang <fzpying@gmail.com>"
+copyright = "2025, Fynn Tang, CC-BY-NC-SA-4.0"
+license-file = ["../../LICENSE.md", "0"]
+depends = "libgtk-3-0, libxdo3, libayatana-appindicator3-1 | libappindicator3-1"
+extended-description = """\
+A pure-Rust desktop GUI for the mihomo (Clash Meta) proxy core. \
+Manage proxies, profiles, connections, and system proxy settings."""
+section = "net"
+priority = "optional"
+assets = [
+    ["target/release/mihomo", "/usr/bin/mihomo", "755"],
+    ["target/release/zeroclash-cli", "/usr/bin/zeroclash-cli", "755"],
+]
+
 [lints]
 workspace = true

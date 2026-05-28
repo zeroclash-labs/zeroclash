@@ -9,74 +9,196 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.target }}
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact: zeroclash-linux-amd64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: zeroclash-macos-amd64
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: zeroclash-macos-arm64
+            name: macOS ARM64
+            arch: arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact: zeroclash-macos-amd64
+            name: macOS AMD64
+            arch: amd64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: zeroclash-linux-amd64
+            name: Linux AMD64
+            arch: amd64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact: zeroclash-windows-amd64.exe
+            artifact: zeroclash-windows-amd64
+            name: Windows AMD64
+            arch: amd64
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
 
+      - name: Extract version
+        shell: bash
+        run: echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+
+      # ── Linux system deps ──
       - name: Install Linux deps
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libxdo-dev libappindicator3-dev
+          sudo apt-get install -y libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
 
+      # ── Build ──
       - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package (unix)
-        if: runner.os != 'Windows'
+      # ════════════════════════════════════════════════════════════════
+      # macOS: .app bundle + .dmg
+      # ════════════════════════════════════════════════════════════════
+      - name: Create macOS .app bundle
+        if: runner.os == 'macOS'
+        shell: bash
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czf ../../../${{ matrix.artifact }}.tar.gz zeroclash zeroclash-cli
+          APP_DIR="ZeroClash.app/Contents"
+          mkdir -p "$APP_DIR/MacOS" "$APP_DIR/Resources"
 
-      - name: Package (windows)
+          cp target/${{ matrix.target }}/release/zeroclash "$APP_DIR/MacOS/"
+          cp target/${{ matrix.target }}/release/zeroclash-cli "$APP_DIR/MacOS/"
+          cp target/${{ matrix.target }}/release/mihomo "$APP_DIR/MacOS/"
+          chmod +x "$APP_DIR/MacOS/"*
+
+          sed "s/REPLACE_VERSION/${APP_VERSION}/g" apps/zeroclash/Info.plist > "$APP_DIR/Info.plist"
+
+      - name: Create macOS DMG
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p dmg_staging
+          cp -r ZeroClash.app dmg_staging/
+          ln -s /Applications dmg_staging/Applications
+
+          hdiutil create \
+            -volname "ZeroClash" \
+            -srcfolder dmg_staging \
+            -ov -format UDZO -fs HFS+ \
+            "${{ matrix.artifact }}.dmg"
+
+      # ════════════════════════════════════════════════════════════════
+      # Linux: .deb + AppImage
+      # ════════════════════════════════════════════════════════════════
+      - name: Install cargo-deb
+        if: runner.os == 'Linux'
+        run: cargo install cargo-deb
+
+      - name: Prepare binaries for cargo-deb
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # cargo-deb expects binaries at target/release/ relative to crate
+          mkdir -p target/release
+          cp target/${{ matrix.target }}/release/zeroclash target/release/
+          cp target/${{ matrix.target }}/release/zeroclash-cli target/release/
+          cp target/${{ matrix.target }}/release/mihomo target/release/
+
+      - name: Build .deb
+        if: runner.os == 'Linux'
+        run: cargo deb --no-build --target ${{ matrix.target }} -p zeroclash
+
+      - name: Build AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          mkdir -p AppDir/usr/bin AppDir/usr/share/icons/hicolor/256x256/apps
+
+          cp target/${{ matrix.target }}/release/zeroclash AppDir/usr/bin/
+          cp target/${{ matrix.target }}/release/zeroclash-cli AppDir/usr/bin/
+          cp target/${{ matrix.target }}/release/mihomo AppDir/usr/bin/
+          chmod +x AppDir/usr/bin/*
+
+          cp apps/zeroclash/zeroclash.desktop AppDir/
+          cp apps/zeroclash/AppRun AppDir/
+          chmod +x AppDir/AppRun
+
+          # Minimal 1x1 PNG as placeholder icon
+          printf '\x89PNG\x0d\x0a\x1a\x0a\x00\x00\x00\x0dIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0aIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\x0d\x0a\x2d\xb4\x00\x00\x00\x00IEND\xaeB\x60\x82' > AppDir/zeroclash.png
+          cp AppDir/zeroclash.png AppDir/usr/share/icons/hicolor/256x256/apps/
+
+          wget -q "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage"
+          chmod +x appimagetool-x86_64.AppImage
+          ./appimagetool-x86_64.AppImage --no-appstream AppDir "${{ matrix.artifact }}.AppImage"
+
+      # ════════════════════════════════════════════════════════════════
+      # Windows: NSIS installer
+      # ════════════════════════════════════════════════════════════════
+      - name: Install NSIS
         if: runner.os == 'Windows'
-        run: |
-          cd target/${{ matrix.target }}/release
-          7z a ../../../${{ matrix.artifact }}.zip zeroclash.exe zeroclash-cli.exe
+        shell: powershell
+        run: choco install nsis --no-progress
 
-      - uses: actions/upload-artifact@v7
+      - name: Build NSIS installer
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          sed -e "s/REPLACE_VERSION/${APP_VERSION}/g" \
+              -e "s|REPLACE_TARGET|${{ matrix.target }}|g" \
+              apps/zeroclash/installer.nsi > installer_versioned.nsi
+          cp LICENSE.md LICENSE.txt
+          makensis installer_versioned.nsi
+
+      # ── Upload artifacts ──
+      - name: Upload macOS DMG
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.*
+          path: ${{ matrix.artifact }}.dmg
+
+      - name: Upload Linux packages
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            target/${{ matrix.target }}/debian/*.deb
+            ${{ matrix.artifact }}.AppImage
+
+      - name: Upload Windows installer
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ZeroClash-*-setup.exe
 
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v8
 
       - name: Generate changelog
         run: |
-          git log --pretty=format:'- %s' $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD > CHANGELOG.md
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          git log --pretty=format:'- %s' ${PREV_TAG}..HEAD > CHANGELOG.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
           body_path: CHANGELOG.md
           files: |
-            zeroclash-linux-amd64/zeroclash-linux-amd64.tar.gz
-            zeroclash-macos-amd64/zeroclash-macos-amd64.tar.gz
-            zeroclash-macos-arm64/zeroclash-macos-arm64.tar.gz
-            zeroclash-windows-amd64.exe/zeroclash-windows-amd64.exe.zip
+            zeroclash-macos-arm64/zeroclash-macos-arm64.dmg
+            zeroclash-macos-amd64/zeroclash-macos-amd64.dmg
+            zeroclash-linux-amd64/*.deb
+            zeroclash-linux-amd64/*.AppImage
+            zeroclash-windows-amd64/ZeroClash-*-setup.exe
