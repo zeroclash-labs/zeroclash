@@ -1,7 +1,10 @@
 //! System integration utilities: auto-start, singleton instance, system proxy, notifications.
 
-use anyhow::{Context as _, Result};
 use std::path::PathBuf;
+
+use anyhow::{Context as _, Result};
+
+use crate::paths;
 
 // ── Auto‑start ─────────────────────────────────────────────────────────────
 
@@ -66,10 +69,8 @@ impl AutoStart {
 
 /// Acquire a singleton lock. Returns Ok(true) if this is the first instance,
 /// Ok(false) if another instance is already running.
-pub fn acquire_singleton(app_name: &str) -> Result<bool> {
-    let lock_dir = dirs_next::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(app_name);
+pub fn acquire_singleton(_app_name: &str) -> Result<bool> {
+    let lock_dir = paths::data_dir();
     std::fs::create_dir_all(&lock_dir).ok();
 
     let lock_path = lock_dir.join("singleton.lock");
@@ -86,11 +87,8 @@ pub fn acquire_singleton(app_name: &str) -> Result<bool> {
 }
 
 /// Release the singleton lock.
-pub fn release_singleton(app_name: &str) {
-    let lock_path = dirs_next::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(app_name)
-        .join("singleton.lock");
+pub fn release_singleton(_app_name: &str) {
+    let lock_path = paths::data_dir().join("singleton.lock");
     let _ = std::fs::remove_file(lock_path);
 }
 

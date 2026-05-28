@@ -1,12 +1,14 @@
 use compact_str::CompactString;
+use std::fmt;
+use std::path::Path;
+use std::sync::Arc;
+
 use flexi_logger::DeferredNow;
 use flexi_logger::filter::LogLineFilter;
 use flexi_logger::writers::FileLogWriter;
 use flexi_logger::writers::LogWriter as _;
 use log::Level;
 use log::Record;
-use std::fmt;
-use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::MutexGuard;
 
@@ -128,4 +130,33 @@ impl LogLineFilter for NoModuleFilter<'_> {
         }
         writer.write(now, record)
     }
+}
+
+/// Initialize the file-based log backend.
+///
+/// After this call, all `log` crate macros (`log::info!`, `log::warn!`, etc.)
+/// write to rotating daily log files under `log_dir`. Log files are kept for
+/// 7 days.
+///
+/// # Errors
+///
+/// Returns an error if the log directory cannot be created or the logger
+/// cannot be initialized (typically because one is already set).
+pub fn init_logger(log_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    std::fs::create_dir_all(log_dir)?;
+
+    flexi_logger::Logger::try_with_str("info")?
+        .log_to_file(
+            flexi_logger::FileSpec::default()
+                .directory(log_dir)
+                .basename("zeroclash"),
+        )
+        .rotate(
+            flexi_logger::Criterion::Age(flexi_logger::Age::Day),
+            flexi_logger::Naming::Timestamps,
+            flexi_logger::Cleanup::KeepLogFiles(7),
+        )
+        .start()?;
+
+    Ok(())
 }

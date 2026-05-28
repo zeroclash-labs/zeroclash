@@ -8,6 +8,7 @@ pub mod i18n;
 mod macos_proxy;
 pub mod media_unlock;
 pub mod mihomo;
+pub mod paths;
 pub mod profile;
 pub mod service;
 pub mod sys;

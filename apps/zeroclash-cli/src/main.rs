@@ -4,10 +4,10 @@
 
 use clap::{Parser, Subcommand};
 use serde_json::Value;
-use std::path::PathBuf;
 
 use zeroclash_core::ProfileStore;
 use zeroclash_core::mihomo::MihomoClient;
+use zeroclash_core::paths;
 
 /// ZeroClash CLI — manage the mihomo proxy core from the command line.
 #[derive(Parser)]
@@ -109,6 +109,9 @@ enum LogAction {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let log_dir = paths::log_dir();
+    zeroclash_logging::init_logger(&log_dir).ok();
+
     let cli = Cli::parse();
     let client = MihomoClient::new(&cli.controller);
 
@@ -187,7 +190,7 @@ async fn handle_config(client: &MihomoClient, action: ConfigAction) -> anyhow::R
 // ── Profile handlers ────────────────────────────────────────────────────────
 
 async fn handle_profile(action: ProfileAction) -> anyhow::Result<()> {
-    let data_dir = dirs_next().join("zeroclash");
+    let data_dir = paths::data_dir();
     std::fs::create_dir_all(&data_dir)?;
 
     match action {
@@ -244,10 +247,6 @@ async fn handle_log(client: &MihomoClient, action: LogAction) -> anyhow::Result<
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-
-fn dirs_next() -> PathBuf {
-    dirs_next::data_dir().unwrap_or_else(|| PathBuf::from("."))
-}
 
 fn format_bytes(bytes: u64) -> String {
     if bytes < 1024 {

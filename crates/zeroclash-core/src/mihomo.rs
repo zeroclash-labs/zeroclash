@@ -313,11 +313,7 @@ impl CoreManager {
 
         let child = Command::new(&self.core_path)
             .arg("-d")
-            .arg(
-                dirs_next::data_dir()
-                    .unwrap_or_else(|| PathBuf::from("."))
-                    .join("zeroclash"),
-            )
+            .arg(crate::paths::data_dir())
             .kill_on_drop(true)
             .spawn()
             .with_context(|| format!("Failed to start core at {:?}", self.core_path))?;

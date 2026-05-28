@@ -86,10 +86,7 @@ pub fn init_fonts(cx: &App) {
         counts.1,
         names.len(),
     );
-    eprint!("{diag}");
-    if let Some(home) = dirs_next::home_dir() {
-        let _ = std::fs::write(home.join("zeroclash-fonts.log"), &diag);
-    }
+    log::info!("{diag}");
 }
 
 #[cfg(not(target_os = "macos"))]

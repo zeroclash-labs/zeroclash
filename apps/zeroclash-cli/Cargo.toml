@@ -11,12 +11,14 @@ license.workspace = true
 
 [dependencies]
 zeroclash-core = { workspace = true }
+zeroclash-logging = { workspace = true }
 clap = { version = "4", features = ["derive"] }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml_ng = { workspace = true }
 anyhow = { workspace = true }
-dirs-next = "2"
+log = { workspace = true }
+dirs = { workspace = true }
 
 [lints]
 workspace = true

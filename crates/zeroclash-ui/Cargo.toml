@@ -11,6 +11,7 @@ license.workspace = true
 
 [dependencies]
 zeroclash-core = { workspace = true }
+zeroclash-logging = { workspace = true }
 zeroclash-i18n = { workspace = true }
 gpui = { workspace = true }
 gpui_platform = { workspace = true }
@@ -18,7 +19,7 @@ anyhow = { workspace = true }
 log = { workspace = true }
 serde_yaml_ng = { workspace = true }
 dark-light = "2"
-dirs-next = "2"
+dirs = { workspace = true }
 tray-icon = "0.24"
 global-hotkey = "0.8"
 arboard = "3"
