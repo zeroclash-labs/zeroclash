@@ -98,6 +98,8 @@ pub enum CoreMode {
 /// Which source provided the resolved core path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoreSource {
+    /// Bundled at build time next to the executable.
+    Bundled(PathBuf),
     /// Path from user configuration (`VergeConfig::clash_core_path`).
     Config(PathBuf),
     /// Auto-downloaded core at the managed path.
@@ -109,13 +111,17 @@ pub enum CoreSource {
 /// Resolve which mihomo binary to use.
 ///
 /// Priority:
-/// 1. User-configured path (`VergeConfig::clash_core_path`), if non-empty.
-/// 2. Managed (downloaded) core at `<data_dir>/core/mihomo`, if it exists.
-/// 3. Bare `"mihomo"` relying on PATH lookup.
+/// 1. Bundled core (next to the executable), if present.
+/// 2. User-configured path (`VergeConfig::clash_core_path`), if non-empty.
+/// 3. Managed (downloaded) core at `<data_dir>/core/mihomo`, if it exists.
+/// 4. Bare `"mihomo"` relying on PATH lookup.
 pub fn resolve_core_path(
     config: &crate::config::VergeConfig,
     data_dir: &Path,
 ) -> (PathBuf, CoreSource) {
+    if let Some(bundled) = crate::core_installer::bundled_core_path() {
+        return (bundled.clone(), CoreSource::Bundled(bundled));
+    }
     if !config.clash_core_path.is_empty() {
         let p = PathBuf::from(&config.clash_core_path);
         return (p.clone(), CoreSource::Config(p));

@@ -65,3 +65,14 @@ tray:
     systemProxy: 系統代理
     tun: 虛擬網路介面卡
     profile: 訂閱
+ui:
+  pages:
+    dashboard:
+      coreInstaller:
+        installCore: 安裝內核
+        checking: 檢查最新版本...
+        downloading: 下載 mihomo...
+        extracting: 解壓中...
+        installed: 已安裝
+        failed: 安裝失敗
+        retry: 重試

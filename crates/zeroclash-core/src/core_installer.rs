@@ -71,6 +71,15 @@ pub fn version_file_path(data_dir: &Path) -> PathBuf {
     data_dir.join("core").join("version.txt")
 }
 
+/// If a mihomo binary was bundled at build time (placed next to the
+/// executable), return its path.
+pub fn bundled_core_path() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?;
+    let core = dir.join(format!("mihomo{}", exe_ext()));
+    core.exists().then_some(core)
+}
+
 /// Read the locally installed version, if version.txt exists and is non-empty.
 pub fn installed_version(data_dir: &Path) -> Option<String> {
     let path = version_file_path(data_dir);

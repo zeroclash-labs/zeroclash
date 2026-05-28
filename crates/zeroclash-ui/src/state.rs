@@ -554,7 +554,7 @@ impl AppState {
                 .push(LogLevel::Info, "core", "Core stopped");
             notify("ZeroClash", "Core stopped");
         } else {
-            let (core_path, _source) =
+            let (core_path, source) =
                 zeroclash_core::resolve_core_path(&self.config.verge.latest_arc(), &self.data_dir);
 
             if !std::path::Path::new(&core_path).exists() {
@@ -564,6 +564,22 @@ impl AppState {
                     "core binary not found — click Install to download",
                 );
                 return;
+            }
+
+            // Copy bundled core to managed dir on first launch so subsequent
+            // launches find it immediately and don't depend on the build-time
+            // binary staying next to the executable.
+            let managed = zeroclash_core::core_installer::managed_core_path(&self.data_dir);
+            if matches!(source, zeroclash_core::CoreSource::Bundled(_)) && !managed.exists() {
+                if let Some(parent) = managed.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                if let Err(e) = std::fs::copy(&core_path, &managed) {
+                    log::warn!("failed to copy bundled core to managed path: {e}");
+                } else {
+                    log::info!("copied bundled core to {}", managed.display());
+                    // Re-use the managed path from this point forward.
+                }
             }
 
             let cm = CoreManager::new(core_path.clone(), None);

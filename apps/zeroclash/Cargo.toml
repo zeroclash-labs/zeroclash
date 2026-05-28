@@ -12,5 +12,10 @@ license.workspace = true
 [dependencies]
 zeroclash-ui = { workspace = true }
 
+[build-dependencies]
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+flate2 = "1"
+zip = "2"
+
 [lints]
 workspace = true

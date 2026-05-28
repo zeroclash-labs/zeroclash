@@ -65,3 +65,14 @@ tray:
     systemProxy: 시스템 프록시
     tun: TUN
     profile: 프로필
+ui:
+  pages:
+    dashboard:
+      coreInstaller:
+        installCore: 코어 설치
+        checking: 최신 버전 확인 중...
+        downloading: mihomo 다운로드 중...
+        extracting: 압축 해제 중...
+        installed: 설치됨
+        failed: 설치 실패
+        retry: 다시 시도

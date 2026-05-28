@@ -183,22 +183,27 @@ fn install_section(c: Colors, state: &AppState, cx: &mut Context<AppState>) -> i
                     tr("ui.pages.dashboard.coreInstaller.installed")
                 )))
         }
-        CoreInstallState::Idle => div()
-            .mt(px(SPACE_MD))
-            .bg(c.success_dim)
-            .rounded(px(RADIUS_SM))
-            .px(px(SPACE_LG))
-            .py(px(SPACE_SM))
-            .text_color(c.success)
-            .cursor(CursorStyle::PointingHand)
-            .child(tr("ui.pages.dashboard.coreInstaller.installCore"))
-            .on_mouse_up(
-                MouseButton::Left,
-                cx.listener(|this, _e, _w, cx| {
-                    this.push_command(UiCommand::InstallCore);
-                    cx.notify();
-                }),
-            ),
+        CoreInstallState::Idle => {
+            if zeroclash_core::core_installer::managed_core_path(&state.data_dir).exists() {
+                return div();
+            }
+            div()
+                .mt(px(SPACE_MD))
+                .bg(c.success_dim)
+                .rounded(px(RADIUS_SM))
+                .px(px(SPACE_LG))
+                .py(px(SPACE_SM))
+                .text_color(c.success)
+                .cursor(CursorStyle::PointingHand)
+                .child(tr("ui.pages.dashboard.coreInstaller.installCore"))
+                .on_mouse_up(
+                    MouseButton::Left,
+                    cx.listener(|this, _e, _w, cx| {
+                        this.push_command(UiCommand::InstallCore);
+                        cx.notify();
+                    }),
+                )
+        }
     }
 }
 

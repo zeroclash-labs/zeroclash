@@ -34,3 +34,7 @@ target
 #/target
 
 .claude/settings.local.json
+
+# Downloaded mihomo core binary (build-time sidecar)
+**/mihomo
+**/mihomo.exe

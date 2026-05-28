@@ -65,3 +65,14 @@ tray:
     systemProxy: Системалы прокси
     tun: TUN
     profile: Профиль
+ui:
+  pages:
+    dashboard:
+      coreInstaller:
+        installCore: Install Core
+        checking: Checking latest version...
+        downloading: Downloading mihomo...
+        extracting: Extracting...
+        installed: Installed
+        failed: Installation failed
+        retry: Retry
