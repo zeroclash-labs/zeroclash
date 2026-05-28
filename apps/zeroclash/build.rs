@@ -3,7 +3,9 @@
 //!
 //! Only runs for `--release` builds to keep debug builds fast.
 
-use std::io::Read;
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
 fn main() {
@@ -65,7 +67,7 @@ fn main() {
             let _ = std::fs::remove_file(&temp);
             #[cfg(unix)]
             {
-                use std::os::unix::fs::PermissionsExt;
+                use std::os::unix::fs::PermissionsExt as _;
                 let _ = std::fs::set_permissions(&dest, std::fs::Permissions::from_mode(0o755));
             }
             println!("cargo:warning=mihomo core installed to {}", dest.display());

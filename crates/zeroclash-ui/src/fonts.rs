@@ -75,8 +75,11 @@ pub fn init_fonts(cx: &App) {
     };
 
     // Unwrap safety: init_fonts is called once, so set() always succeeds.
-    SANS_FAMILY.set(sans.to_string()).unwrap();
-    MONO_FAMILY.set(mono.to_string()).unwrap();
+    #[allow(clippy::unwrap_used)]
+    {
+        SANS_FAMILY.set(sans.to_string()).unwrap();
+        MONO_FAMILY.set(mono.to_string()).unwrap();
+    }
 
     let diag = format!(
         "[zc-fonts] registered {}/{} ttf, \
@@ -111,7 +114,7 @@ mod macos {
     use core_graphics::data_provider::CGDataProvider;
     use core_graphics::font::CGFont;
     use core_graphics::sys::CGFontRef;
-    use foreign_types_shared::ForeignType;
+    use foreign_types_shared::ForeignType as _;
 
     use super::EMBEDDED;
 
