@@ -65,3 +65,108 @@ tray:
     systemProxy: System Proxy
     tun: TUN
     profile: Profile
+ui:
+  sidebar:
+    appName: ZeroClash
+    section: NAVIGATION
+    coreRunning: Core Running
+    coreStopped: Core Stopped
+  nav:
+    dashboard: Dashboard
+    proxies: Proxies
+    profiles: Profiles
+    connections: Connections
+    logs: Logs
+    settings: Settings
+  pages:
+    dashboard:
+      coreStatus: CORE STATUS
+      trafficMonitor: TRAFFIC MONITOR
+      outboundMode: OUTBOUND MODE
+      tunMode: TUN MODE
+      system: SYSTEM
+      running: Running
+      stopped: Stopped
+      active: Active
+      inactive: Inactive
+      startCore: Start Core
+      stopCore: Stop Core
+      enableTun: Enable TUN
+      disableTun: Disable TUN
+      version: Version
+      systemProxy: System Proxy
+      systemProxyOn: 'ON'
+      systemProxyOff: 'OFF'
+      mode:
+        rule: rule
+        global: global
+        direct: direct
+    proxies:
+      title: Proxies
+      filterPlaceholder: type to filter groups / nodes (Esc to clear)
+      test: Test
+      nodesCount: '{count} nodes'
+    profiles:
+      title: Profiles
+      importFromUrl: '+ Import from URL'
+      noProfiles: No profiles yet
+      noProfilesHint: Import a subscription URL to get started
+      importTitle: Import Profile from URL
+      subscriptionUrl: Subscription URL
+      urlPlaceholder: Type or paste a subscription URL
+      paste: Paste
+      import: Import
+      cancel: Cancel
+      activate: Activate
+      delete: Delete
+      confirmDelete: Confirm Delete
+      activeBadge: ● Active
+      activeMarker: (active)
+      updatedPrefix: 'updated {age}'
+      typeRemote: REMOTE
+      typeLocal: LOCAL
+      typeMerge: MERGE
+      typeScript: SCRIPT
+      typeOther: OTHER
+      typeProfile: PROFILE
+      errors:
+        emptyUrl: Enter a URL or paste from clipboard
+        invalidScheme: 'URL must start with http:// or https://'
+    connections:
+      title: 'Active Connections ({count})'
+      none: No active connections
+      headerHost: Host
+      headerType: Type
+      headerChain: Chain
+      headerRule: Rule
+      headerDlUl: DL / UL
+      detailTitle: Connection Detail
+      detailHost: 'Host:'
+      detailNetwork: 'Network:'
+      detailSource: 'Source:'
+      detailDest: 'Dest:'
+      detailRule: 'Rule:'
+    logs:
+      title: 'Logs ({count})'
+      filters:
+        errors: Errors
+        warnings: Warnings
+        info: Info
+        all: All
+      auto: Auto
+      clear: Clear
+      noEntries: No matching entries
+      searchPlaceholder: type to filter / Esc to clear
+    settings:
+      title: Settings
+      appearance: Appearance
+      system: System
+      ports: Ports
+      theme: Theme
+      language: Language
+      systemProxy: System Proxy
+      tunMode: TUN Mode
+      autoStart: Auto Start
+      http: HTTP
+      socks: SOCKS
+      mixed: Mixed

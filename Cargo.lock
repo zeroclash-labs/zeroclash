@@ -3026,6 +3026,7 @@ dependencies = [
  "strum",
  "util",
  "uuid",
+ "zed-font-kit",
 ]
 
 [[package]]
@@ -9541,8 +9542,11 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "arboard",
+ "core-foundation 0.10.0",
+ "core-graphics 0.24.0",
  "dark-light",
  "dirs-next",
+ "foreign-types-shared",
  "global-hotkey",
  "gpui",
  "gpui_platform",
@@ -9553,6 +9557,7 @@ dependencies = [
  "tokio",
  "tray-icon",
  "zeroclash-core",
+ "zeroclash-i18n",
 ]
 
 [[package]]

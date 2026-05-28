@@ -105,3 +105,8 @@ pub const FONT_MD: f32 = 14.0;
 pub const FONT_LG: f32 = 18.0;
 pub const FONT_XL: f32 = 24.0;
 pub const FONT_XXL: f32 = 32.0;
+
+// Font family names are resolved at startup by [`crate::fonts::init_fonts`].
+// Use [`crate::fonts::sans_family`] / [`crate::fonts::mono_family`] — they
+// return the best available family, falling back to "Helvetica" on systems
+// where the embedded Geist fonts cannot be registered (e.g. macOS 26 font-kit).

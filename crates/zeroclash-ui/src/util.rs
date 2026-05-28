@@ -1,6 +1,63 @@
+use gpui::SharedString;
 use serde_json::Value;
 use zeroclash_core::ConnEntry;
 use zeroclash_core::mihomo::{DelayHistory, ProxyGroup};
+
+/// `ConnEntry` plus pre-formatted `SharedString`s consumed by the
+/// connections view. Computing these once per refresh (instead of every
+/// frame) prevents the connections list from re-allocating dozens of
+/// `format!` strings during the 30-frame UI poll cycle.
+#[derive(Debug, Clone)]
+pub struct CachedConn {
+    pub entry: ConnEntry,
+    pub speed_text: SharedString,
+    pub source_addr: SharedString,
+    pub dest_addr: SharedString,
+    pub chain_text: SharedString,
+}
+
+pub fn parse_cached_connections(v: &Value) -> Vec<CachedConn> {
+    parse_connections(v)
+        .into_iter()
+        .map(|entry| {
+            let speed_text = SharedString::from(format!(
+                "↓{} ↑{}",
+                fmt_speed(entry.download),
+                fmt_speed(entry.upload)
+            ));
+            let source_addr =
+                SharedString::from(format!("{}:{}", entry.source_ip, entry.source_port));
+            let dest_addr = SharedString::from(format!(
+                "{}:{}",
+                entry.destination_ip, entry.destination_port
+            ));
+            let chain_text = SharedString::from(if entry.chains.is_empty() {
+                "-".to_string()
+            } else {
+                entry.chains.join(" → ")
+            });
+            CachedConn {
+                entry,
+                speed_text,
+                source_addr,
+                dest_addr,
+                chain_text,
+            }
+        })
+        .collect()
+}
+
+fn fmt_speed(bytes: u64) -> String {
+    if bytes < 1024 {
+        format!("{bytes}B")
+    } else if bytes < 1_048_576 {
+        format!("{:.1}K", bytes as f64 / 1024.0)
+    } else if bytes < 1_073_741_824 {
+        format!("{:.1}M", bytes as f64 / 1_048_576.0)
+    } else {
+        format!("{:.1}G", bytes as f64 / 1_073_741_824.0)
+    }
+}
 
 pub fn parse_connections(v: &Value) -> Vec<ConnEntry> {
     let mut entries = Vec::new();

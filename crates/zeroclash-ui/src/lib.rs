@@ -4,7 +4,10 @@
 pub mod app;
 pub mod components;
 pub mod design;
+pub mod fonts;
 pub mod hotkey;
+pub mod i18n;
+pub mod runtime;
 pub mod state;
 pub mod theme;
 pub mod tray;
