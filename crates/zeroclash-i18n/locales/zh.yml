@@ -97,6 +97,14 @@ ui:
       systemProxy: 系统代理
       systemProxyOn: 开
       systemProxyOff: 关
+      coreInstaller:
+        installCore: 安装内核
+        checking: 检查最新版本...
+        downloading: 下载 mihomo...
+        extracting: 解压中...
+        installed: 已安装
+        failed: 安装失败
+        retry: 重试
       mode:
         rule: 规则
         global: 全局

@@ -97,6 +97,14 @@ ui:
       systemProxy: System Proxy
       systemProxyOn: 'ON'
       systemProxyOff: 'OFF'
+      coreInstaller:
+        installCore: Install Core
+        checking: Checking latest version...
+        downloading: Downloading mihomo...
+        extracting: Extracting...
+        installed: Installed
+        failed: Installation failed
+        retry: Retry
       mode:
         rule: rule
         global: global

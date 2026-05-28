@@ -6,7 +6,7 @@
 use anyhow::{Context as _, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
@@ -93,6 +93,38 @@ pub struct Traffic {
 pub enum CoreMode {
     NotRunning,
     Running(String), // version
+}
+
+/// Which source provided the resolved core path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CoreSource {
+    /// Path from user configuration (`VergeConfig::clash_core_path`).
+    Config(PathBuf),
+    /// Auto-downloaded core at the managed path.
+    Managed(PathBuf),
+    /// Bare name, relying on system PATH.
+    Path,
+}
+
+/// Resolve which mihomo binary to use.
+///
+/// Priority:
+/// 1. User-configured path (`VergeConfig::clash_core_path`), if non-empty.
+/// 2. Managed (downloaded) core at `<data_dir>/core/mihomo`, if it exists.
+/// 3. Bare `"mihomo"` relying on PATH lookup.
+pub fn resolve_core_path(
+    config: &crate::config::VergeConfig,
+    data_dir: &Path,
+) -> (PathBuf, CoreSource) {
+    if !config.clash_core_path.is_empty() {
+        let p = PathBuf::from(&config.clash_core_path);
+        return (p.clone(), CoreSource::Config(p));
+    }
+    let managed = crate::core_installer::managed_core_path(data_dir);
+    if managed.exists() {
+        return (managed.clone(), CoreSource::Managed(managed));
+    }
+    (PathBuf::from("mihomo"), CoreSource::Path)
 }
 
 // ── Mihomo REST client ─────────────────────────────────────────────────────

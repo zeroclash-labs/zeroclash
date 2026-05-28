@@ -32,6 +32,20 @@ pub enum Page {
     Settings,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CoreInstallState {
+    Idle,
+    Installing(String),
+    Installed(String),
+    Failed(String),
+}
+
+impl CoreInstallState {
+    pub const fn is_installing(&self) -> bool {
+        matches!(self, Self::Installing(_))
+    }
+}
+
 pub enum UiCommand {
     Navigate(Page),
     ToggleCore,
@@ -47,6 +61,7 @@ pub enum UiCommand {
     SwitchMode(String),
     ToggleTun,
     TestDelay(String),
+    InstallCore,
 }
 
 /// Events posted by background tokio tasks back to the UI thread.
@@ -78,11 +93,18 @@ pub enum UiEvent {
     /// Sent by the supervisor task when the running mihomo core has been
     /// unreachable for several consecutive probes — likely crashed.
     CoreCrashed,
+    /// Core installer progress update.
+    CoreInstallStatus(String),
+    /// Core installation completed successfully.
+    CoreInstallDone(String),
+    /// Core installation failed.
+    CoreInstallFailed(String),
 }
 
 pub struct AppState {
     pub current_page: Page,
     pub core_running: bool,
+    pub core_install_state: CoreInstallState,
     pub traffic: TrafficHistory,
     pub proxy_groups: Vec<ProxyGroup>,
     pub connections: Vec<CachedConn>,
@@ -154,6 +176,7 @@ impl AppState {
         Self {
             current_page: Page::Home,
             core_running: false,
+            core_install_state: CoreInstallState::Idle,
             traffic: TrafficHistory::default(),
             proxy_groups: Vec::new(),
             connections: Vec::new(),
@@ -246,6 +269,26 @@ impl AppState {
                 UiEvent::Notify { title, body } => notify(&title, &body),
                 UiEvent::PostCommand(cmd) => self.push_command(cmd),
                 UiEvent::CoreCrashed => self.handle_core_crashed(),
+                UiEvent::CoreInstallStatus(msg) => {
+                    self.core_install_state = CoreInstallState::Installing(msg);
+                }
+                UiEvent::CoreInstallDone(version) => {
+                    self.core_install_state = CoreInstallState::Installed(version.clone());
+                    self.log_viewer.store.push(
+                        LogLevel::Info,
+                        "core",
+                        &format!("core v{version} installed"),
+                    );
+                    self.push_command(UiCommand::ToggleCore);
+                }
+                UiEvent::CoreInstallFailed(err) => {
+                    self.core_install_state = CoreInstallState::Failed(err.clone());
+                    self.log_viewer.store.push(
+                        LogLevel::Error,
+                        "core",
+                        &format!("core install failed: {err}"),
+                    );
+                }
             }
         }
     }
@@ -511,16 +554,19 @@ impl AppState {
                 .push(LogLevel::Info, "core", "Core stopped");
             notify("ZeroClash", "Core stopped");
         } else {
-            let core_path = {
-                let verge = self.config.verge.latest_arc();
-                if verge.clash_core_path.is_empty() {
-                    "mihomo".to_string()
-                } else {
-                    verge.clash_core_path.clone()
-                }
-            };
+            let (core_path, _source) =
+                zeroclash_core::resolve_core_path(&self.config.verge.latest_arc(), &self.data_dir);
 
-            let cm = CoreManager::new(PathBuf::from(&core_path), None);
+            if !std::path::Path::new(&core_path).exists() {
+                self.log_viewer.store.push(
+                    LogLevel::Warn,
+                    "core",
+                    "core binary not found — click Install to download",
+                );
+                return;
+            }
+
+            let cm = CoreManager::new(core_path.clone(), None);
 
             match pollster::block_on(cm.start()) {
                 Ok(()) => {
@@ -531,7 +577,7 @@ impl AppState {
                     self.log_viewer.store.push(
                         LogLevel::Info,
                         "core",
-                        &format!("Core started from {core_path}"),
+                        &format!("Core started from {}", core_path.display()),
                     );
                     notify("ZeroClash", "Core started");
                 }
@@ -723,6 +769,42 @@ impl AppState {
         });
     }
 
+    fn spawn_install_core(&mut self) {
+        self.core_install_state = CoreInstallState::Installing(
+            tr("ui.pages.dashboard.coreInstaller.checking").to_string(),
+        );
+        let data_dir = self.data_dir.clone();
+        let tx = self.event_tx.clone();
+        crate::runtime::handle().spawn(async move {
+            let _ = tx.send(UiEvent::CoreInstallStatus(
+                "checking latest version...".into(),
+            ));
+
+            let version = match zeroclash_core::core_installer::fetch_latest_version().await {
+                Ok(v) => v,
+                Err(e) => {
+                    let _ = tx.send(UiEvent::CoreInstallFailed(e.to_string()));
+                    return;
+                }
+            };
+
+            let tx2 = tx.clone();
+            let on_progress = move |msg: &str| {
+                let _ = tx2.send(UiEvent::CoreInstallStatus(msg.to_string()));
+            };
+            match zeroclash_core::core_installer::install_version(&data_dir, &version, &on_progress)
+                .await
+            {
+                Ok(_path) => {
+                    let _ = tx.send(UiEvent::CoreInstallDone(version));
+                }
+                Err(e) => {
+                    let _ = tx.send(UiEvent::CoreInstallFailed(e.to_string()));
+                }
+            }
+        });
+    }
+
     pub fn push_command(&mut self, cmd: UiCommand) {
         self.pending_commands.push(cmd);
     }
@@ -767,6 +849,7 @@ impl AppState {
                 UiCommand::SwitchMode(mode) => self.spawn_switch_mode(mode),
                 UiCommand::ToggleTun => self.handle_toggle_tun(),
                 UiCommand::TestDelay(name) => self.spawn_test_delay(name),
+                UiCommand::InstallCore => self.spawn_install_core(),
             }
         }
     }

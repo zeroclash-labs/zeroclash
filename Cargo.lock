@@ -9448,6 +9448,7 @@ dependencies = [
  "directories",
  "dirs 6.0.0",
  "fd-lock",
+ "flate2",
  "futures-util",
  "log",
  "notify-rust",

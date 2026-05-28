@@ -53,6 +53,7 @@ bitflags = "2.11"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
 dirs = "6"
+flate2 = "1"
 
 # Windows-only
 deelevate = "0.2"

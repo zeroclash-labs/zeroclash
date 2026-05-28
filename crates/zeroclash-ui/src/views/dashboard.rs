@@ -4,7 +4,7 @@ use crate::components::card::{card, page_heading, section_title};
 use crate::components::traffic_graph::traffic_summary;
 use crate::design::{Colors, RADIUS_SM, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS};
 use crate::i18n::tr;
-use crate::state::{AppState, UiCommand};
+use crate::state::{AppState, CoreInstallState, UiCommand};
 use crate::theme::Theme;
 
 pub fn dashboard_page(
@@ -26,11 +26,7 @@ pub fn dashboard_page(
                 .flex()
                 .gap(px(SPACE_MD))
                 .mb(px(SPACE_MD))
-                .child(
-                    div()
-                        .flex_1()
-                        .child(core_status_card(c, state.core_running, cx)),
-                )
+                .child(div().flex_1().child(core_status_card(c, state, cx)))
                 .child(
                     div().flex_1().child(
                         card(c).child(
@@ -59,7 +55,8 @@ pub fn dashboard_page(
         )
 }
 
-fn core_status_card(c: Colors, core_running: bool, cx: &mut Context<AppState>) -> impl IntoElement {
+fn core_status_card(c: Colors, state: &AppState, cx: &mut Context<AppState>) -> impl IntoElement {
+    let core_running = state.core_running;
     let status_color = if core_running {
         c.success
     } else {
@@ -117,6 +114,7 @@ fn core_status_card(c: Colors, core_running: bool, cx: &mut Context<AppState>) -
                         }),
                     ),
             )
+            .child(install_section(c, state, cx))
             .child(
                 div()
                     .mt(px(SPACE_MD))
@@ -135,6 +133,73 @@ fn core_status_card(c: Colors, core_running: bool, cx: &mut Context<AppState>) -
                     )),
             ),
     )
+}
+
+fn install_section(c: Colors, state: &AppState, cx: &mut Context<AppState>) -> impl IntoElement {
+    if state.core_running {
+        return div();
+    }
+    match &state.core_install_state {
+        CoreInstallState::Installing(msg) => div()
+            .mt(px(SPACE_MD))
+            .bg(c.warning_dim)
+            .rounded(px(RADIUS_SM))
+            .px(px(SPACE_LG))
+            .py(px(SPACE_SM))
+            .text_color(c.warning)
+            .child(SharedString::from(msg.clone())),
+        CoreInstallState::Failed(err) => div()
+            .mt(px(SPACE_MD))
+            .flex()
+            .flex_col()
+            .gap(px(SPACE_XS))
+            .child(div().text_color(c.danger).child(SharedString::from(format!(
+                "{}: {err}",
+                tr("ui.pages.dashboard.coreInstaller.failed")
+            ))))
+            .child(
+                div()
+                    .bg(c.success_dim)
+                    .rounded(px(RADIUS_SM))
+                    .px(px(SPACE_LG))
+                    .py(px(SPACE_SM))
+                    .text_color(c.success)
+                    .cursor(CursorStyle::PointingHand)
+                    .child(tr("ui.pages.dashboard.coreInstaller.retry"))
+                    .on_mouse_up(
+                        MouseButton::Left,
+                        cx.listener(|this, _e, _w, cx| {
+                            this.push_command(UiCommand::InstallCore);
+                            cx.notify();
+                        }),
+                    ),
+            ),
+        CoreInstallState::Installed(version) => {
+            div()
+                .mt(px(SPACE_MD))
+                .text_color(c.success)
+                .child(SharedString::from(format!(
+                    "{} v{version}",
+                    tr("ui.pages.dashboard.coreInstaller.installed")
+                )))
+        }
+        CoreInstallState::Idle => div()
+            .mt(px(SPACE_MD))
+            .bg(c.success_dim)
+            .rounded(px(RADIUS_SM))
+            .px(px(SPACE_LG))
+            .py(px(SPACE_SM))
+            .text_color(c.success)
+            .cursor(CursorStyle::PointingHand)
+            .child(tr("ui.pages.dashboard.coreInstaller.installCore"))
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(|this, _e, _w, cx| {
+                    this.push_command(UiCommand::InstallCore);
+                    cx.notify();
+                }),
+            ),
+    }
 }
 
 fn system_info_card(c: Colors, state: &AppState) -> impl IntoElement {
