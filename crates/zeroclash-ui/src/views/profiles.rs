@@ -6,9 +6,7 @@ use zeroclash_core::profile::ProfilePreview;
 
 use crate::components::card::{card, page_heading};
 use crate::components::log_viewer::LogLevel;
-use crate::design::{
-    Colors, FONT_MONO_FAMILY, RADIUS_SM, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS,
-};
+use crate::design::{Colors, RADIUS_SM, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS};
 use crate::i18n::tr;
 use crate::state::{AppState, UiCommand};
 use crate::theme::Theme;
@@ -142,7 +140,7 @@ fn import_dialog(
                     .px(px(SPACE_MD))
                     .py(px(SPACE_XS))
                     .text_color(placeholder_color)
-                    .font_family(FONT_MONO_FAMILY)
+                    .font_family(crate::fonts::mono_family())
                     .child(display),
             )
             .children(error.map(|msg| {

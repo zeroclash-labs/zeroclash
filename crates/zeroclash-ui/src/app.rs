@@ -11,28 +11,46 @@ use gpui_platform::application;
 
 /// Launch the ZeroClash application.
 pub fn run() {
-    // The guard binds the leaked tokio runtime to this (main) thread for the
-    // entire `application().run(...)` call, so any `pollster::block_on` of a
-    // `tokio::*` future during rendering can find the runtime via
-    // `Handle::current()`. The leaked runtime itself lives forever, so any
-    // tasks spawned via `crate::runtime::handle()` from other threads are
-    // also safe.
+    let log = |msg: &str| {
+        if let Some(home) = dirs_next::home_dir() {
+            let path = home.join("zeroclash-startup.log");
+            let prev = std::fs::read_to_string(&path).unwrap_or_default();
+            let _ = std::fs::write(&path, format!("{prev}{msg}\n"));
+        }
+    };
+    log("[zeroclash] run() entered");
+
     let _runtime_guard = crate::runtime::init();
+    log("[zeroclash] runtime::init OK");
 
     let data_dir = dirs_next::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("zeroclash");
     std::fs::create_dir_all(&data_dir).ok();
+    log("[zeroclash] data_dir created");
 
-    // Resolve initial locale: fall back to system locale if no value has
-    // been persisted in `clash-verge.yaml`. Subsequent `Language` toggles
-    // in Settings call `zeroclash_i18n::set_locale` directly.
     zeroclash_i18n::sync_locale(None);
+    log("[zeroclash] sync_locale done");
 
     let tray = TrayManager::new().ok();
-    let hotkey = HotkeyManager::new();
+    log(&format!(
+        "[zeroclash] TrayManager::new -> Some={}",
+        tray.is_some()
+    ));
 
+    let hotkey = HotkeyManager::new();
+    log("[zeroclash] HotkeyManager::new done");
+
+    log("[zeroclash] about to call application().run(...)");
     application().run(move |cx: &mut App| {
+        if let Some(home) = dirs_next::home_dir() {
+            let path = home.join("zeroclash-startup.log");
+            let prev = std::fs::read_to_string(&path).unwrap_or_default();
+            let _ = std::fs::write(
+                &path,
+                format!("{prev}[zeroclash] application().run closure entered\n"),
+            );
+        }
         crate::fonts::init_fonts(cx);
         init_theme(cx, "");
 

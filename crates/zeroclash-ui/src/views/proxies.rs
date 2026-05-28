@@ -3,7 +3,7 @@ use gpui::{
 };
 
 use crate::components::card::page_heading;
-use crate::design::{Colors, FONT_MONO_FAMILY, RADIUS_SM, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS};
+use crate::design::{Colors, RADIUS_SM, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS};
 use crate::state::{AppState, UiCommand};
 use crate::theme::Theme;
 
@@ -68,7 +68,7 @@ fn search_field(c: Colors, query: &str) -> impl IntoElement {
         } else {
             c.text_primary
         })
-        .font_family(FONT_MONO_FAMILY)
+        .font_family(crate::fonts::mono_family())
         .child(display)
 }
 

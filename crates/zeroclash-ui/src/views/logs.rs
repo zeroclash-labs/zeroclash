@@ -4,7 +4,7 @@ use gpui::{
 
 use crate::components::card::page_heading;
 use crate::components::log_viewer::{LogEntry, LogLevel};
-use crate::design::{Colors, FONT_MONO_FAMILY, RADIUS_SM, SPACE_SM, SPACE_XL, SPACE_XS};
+use crate::design::{Colors, RADIUS_SM, SPACE_SM, SPACE_XL, SPACE_XS};
 use crate::state::AppState;
 use crate::theme::Theme;
 
@@ -146,7 +146,7 @@ fn search_field(c: Colors, query: &str) -> impl IntoElement {
         } else {
             c.text_primary
         })
-        .font_family(FONT_MONO_FAMILY)
+        .font_family(crate::fonts::mono_family())
         .child(display)
 }
 
@@ -225,7 +225,7 @@ fn log_entry(c: Colors, e: &LogEntry) -> impl IntoElement {
         .flex()
         .gap(px(SPACE_XS))
         .py(px(1.0))
-        .font_family(FONT_MONO_FAMILY)
+        .font_family(crate::fonts::mono_family())
         .child(
             div()
                 .text_color(c.text_muted)

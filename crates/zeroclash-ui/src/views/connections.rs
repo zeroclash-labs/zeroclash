@@ -1,8 +1,6 @@
 use gpui::{Context, CursorStyle, MouseButton, SharedString, Window, div, prelude::*, px};
 
-use crate::design::{
-    Colors, FONT_MONO_FAMILY, RADIUS_SM, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS, SPACE_XXS,
-};
+use crate::design::{Colors, RADIUS_SM, SPACE_MD, SPACE_SM, SPACE_XL, SPACE_XS, SPACE_XXS};
 use crate::state::{AppState, UiCommand};
 use crate::theme::Theme;
 use crate::util::CachedConn;
@@ -120,7 +118,7 @@ fn connection_row(
         .child(
             div()
                 .w(px(120.))
-                .font_family(FONT_MONO_FAMILY)
+                .font_family(crate::fonts::mono_family())
                 .child(conn.speed_text.clone()),
         )
         .child(
@@ -202,7 +200,7 @@ fn detail_row_mono(c: Colors, label: &str, value: SharedString) -> impl IntoElem
         .child(
             div()
                 .text_color(c.text_primary)
-                .font_family(FONT_MONO_FAMILY)
+                .font_family(crate::fonts::mono_family())
                 .child(value),
         )
 }

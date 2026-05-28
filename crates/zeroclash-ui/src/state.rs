@@ -14,7 +14,7 @@ use zeroclash_core::{Config, SystemProxy, notify};
 
 use crate::components::log_viewer::{LogLevel, LogViewer};
 use crate::components::traffic_graph::TrafficHistory;
-use crate::design::{self, Colors, FONT_SANS_FAMILY, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS};
+use crate::design::{self, Colors, SPACE_LG, SPACE_MD, SPACE_SM, SPACE_XS};
 use crate::hotkey::HotkeyManager;
 use crate::i18n::tr;
 use crate::theme::Theme;
@@ -850,7 +850,7 @@ impl Render for AppState {
         div()
             .size_full()
             .flex()
-            .font_family(FONT_SANS_FAMILY)
+            .font_family(crate::fonts::sans_family())
             .bg(c.bg)
             .text_color(c.text_primary)
             .track_focus(&sidebar_focus)

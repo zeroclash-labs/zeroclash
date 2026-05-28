@@ -39,7 +39,7 @@ zeroclash-core = { path = "crates/zeroclash-core" }
 zeroclash-ui = { path = "crates/zeroclash-ui" }
 zeroclash-i18n = { path = "crates/zeroclash-i18n" }
 gpui = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.7" }
-gpui_platform = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.7", features = ["runtime_shaders"] }
+gpui_platform = { git = "https://github.com/zed-industries/zed.git", rev = "v1.3.7", features = ["runtime_shaders", "font-kit"] }
 
 parking_lot = { version = "0.12", features = ["hardware-lock-elision"] }
 anyhow = "1.0"
