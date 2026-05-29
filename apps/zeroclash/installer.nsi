@@ -1,5 +1,10 @@
 !define PRODUCT_NAME "ZeroClash"
-!define PRODUCT_VERSION "REPLACE_VERSION"
+!ifndef PRODUCT_VERSION
+  !define PRODUCT_VERSION "0.0.0"
+!endif
+!ifndef TARGET_TRIPLE
+  !define TARGET_TRIPLE "x86_64-pc-windows-msvc"
+!endif
 !define PRODUCT_PUBLISHER "ZeroClash Labs"
 !define PRODUCT_WEB_SITE "https://github.com/zeroclash-labs/zeroclash"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
@@ -34,9 +39,9 @@ RequestExecutionLevel admin
 Section "MainSection" SEC01
     SetOutPath "$INSTDIR"
     SetOverwrite ifnewer
-    File "target\REPLACE_TARGET\release\zeroclash.exe"
-    File "target\REPLACE_TARGET\release\zeroclash-cli.exe"
-    File "target\REPLACE_TARGET\release\mihomo.exe"
+    File "target\${TARGET_TRIPLE}\release\zeroclash.exe"
+    File "target\${TARGET_TRIPLE}\release\zeroclash-cli.exe"
+    File "target\${TARGET_TRIPLE}\release\mihomo.exe"
     CreateDirectory "$SMPROGRAMS\ZeroClash"
     CreateShortCut "$SMPROGRAMS\ZeroClash\ZeroClash.lnk" "$INSTDIR\zeroclash.exe"
     CreateShortCut "$DESKTOP\ZeroClash.lnk" "$INSTDIR\zeroclash.exe"

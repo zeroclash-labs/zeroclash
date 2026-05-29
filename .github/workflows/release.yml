@@ -147,11 +147,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          sed -e "s/REPLACE_VERSION/${APP_VERSION}/g" \
-              -e "s|REPLACE_TARGET|${{ matrix.target }}|g" \
-              apps/zeroclash/installer.nsi > installer_versioned.nsi
           cp LICENSE.md LICENSE.txt
-          makensis installer_versioned.nsi
+          makensis \
+            -DPRODUCT_VERSION="${APP_VERSION}" \
+            -DTARGET_TRIPLE="${{ matrix.target }}" \
+            apps/zeroclash/installer.nsi
 
       # ── Upload artifacts ──
       - name: Upload macOS DMG

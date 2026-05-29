@@ -20,6 +20,18 @@ cargo run -p zeroclash-cli -- --help # CLI usage
 
 Linux builds need `libgtk-3-dev libxdo-dev` + `libayatana-appindicator3-dev` (Ubuntu 24.04+) or `libappindicator3-dev` (< 24.04).
 
+## Package
+
+After `cargo build --release`, create a platform-specific installer:
+
+```sh
+.\scripts\package.ps1           # Windows: dist/ZeroClash-*-setup.exe (requires NSIS)
+bash scripts/package.sh         # macOS:   dist/ZeroClash-*.dmg
+                                # Linux:   dist/*.deb + dist/ZeroClash-*.AppImage
+```
+
+Version is detected from the most recent git tag (`vX.Y.Z`), falling back to `Cargo.toml`. Override with `$env:APP_VERSION` / `$APP_VERSION`. Output goes to `dist/`.
+
 ## Architecture
 
 **Workspace**: 8 library crates under `crates/`, 2 app binaries under `apps/`.

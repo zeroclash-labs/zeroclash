@@ -38,3 +38,6 @@ target
 # Downloaded mihomo core binary (build-time sidecar)
 **/mihomo
 **/mihomo.exe
+
+# Installer output
+/dist
